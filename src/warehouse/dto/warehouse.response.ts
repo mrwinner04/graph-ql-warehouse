@@ -11,11 +11,14 @@ export class WarehouseResponse {
   @Field(() => String, { description: 'Warehouse name' })
   name: string;
 
-  @Field(() => String, { description: 'Warehouse location', nullable: true })
-  location?: string;
+  @Field(() => String, { description: 'Warehouse address', nullable: true })
+  address?: string;
 
-  @Field(() => String, { description: 'Warehouse description', nullable: true })
-  description?: string;
+  @Field(() => String, {
+    description: 'Warehouse type (solid/liquid)',
+    nullable: true,
+  })
+  type?: string;
 
   @Field(() => Date, {
     description: 'When the warehouse was created',

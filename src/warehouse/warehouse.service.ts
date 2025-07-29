@@ -7,36 +7,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WarehouseEntity } from './warehouse.entity';
 import { WarehouseResponse } from './dto/warehouse.response';
+import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
+import { toWarehouseResponse } from '../common/entity-transformers';
+import {
+  validateWarehouseNameNotExists,
+  deleteEntityByRole,
+} from '../common/common.utils';
 
 interface CreateWarehouseData {
   name: string;
-  location?: string;
-  description?: string;
+  address?: string;
+  type?: string;
   companyId: string;
   modifiedBy?: string;
 }
 
 interface UpdateWarehouseData {
   name?: string;
-  location?: string;
-  description?: string;
+  address?: string;
+  type?: string;
   modifiedBy?: string;
-}
-
-// Helper function to transform WarehouseEntity to WarehouseResponse
-function toWarehouseResponse(warehouse: WarehouseEntity): WarehouseResponse {
-  return {
-    id: warehouse.id,
-    companyId: warehouse.companyId,
-    name: warehouse.name,
-    location: warehouse.location,
-    description: warehouse.description,
-    createdAt: warehouse.createdAt,
-    updatedAt: warehouse.updatedAt,
-    deletedAt: warehouse.deletedAt,
-    modifiedBy: warehouse.modifiedBy,
-  };
 }
 
 @Injectable()
@@ -46,7 +37,6 @@ export class WarehouseService {
     private readonly warehouseRepository: Repository<WarehouseEntity>,
   ) {}
 
-  // Find all warehouses in a company
   async findAll(companyId: string): Promise<WarehouseResponse[]> {
     const warehouses = await this.warehouseRepository.find({
       where: { companyId },
@@ -80,23 +70,17 @@ export class WarehouseService {
     return warehouse;
   }
 
-  // Create new warehouse
   async create(data: CreateWarehouseData): Promise<WarehouseResponse> {
-    // Check if warehouse with name already exists in the same company
-    const existingWarehouse = await this.warehouseRepository.findOne({
-      where: { name: data.name, companyId: data.companyId },
-    });
-    if (existingWarehouse) {
-      throw new ConflictException(
-        'Warehouse with this name already exists in your company',
-      );
-    }
+    await validateWarehouseNameNotExists(
+      this.warehouseRepository,
+      data.name,
+      data.companyId,
+    );
 
-    // Create warehouse
     const warehouse = this.warehouseRepository.create({
       name: data.name.trim(),
-      location: data.location?.trim(),
-      description: data.description?.trim(),
+      address: data.address?.trim(),
+      type: data.type?.trim(),
       companyId: data.companyId,
       modifiedBy: data.modifiedBy,
     });
@@ -111,28 +95,23 @@ export class WarehouseService {
     data: UpdateWarehouseData,
     companyId: string,
   ): Promise<WarehouseResponse> {
-    // Check if warehouse exists and has access
     await this.findOne(id, companyId);
 
-    // Check if name is being changed and if it already exists
     if (data.name) {
-      const existingWarehouse = await this.warehouseRepository.findOne({
-        where: { name: data.name, companyId },
-      });
-      if (existingWarehouse && existingWarehouse.id !== id) {
-        throw new ConflictException(
-          'Warehouse with this name already exists in your company',
-        );
-      }
+      await validateWarehouseNameNotExists(
+        this.warehouseRepository,
+        data.name,
+        companyId,
+        id,
+      );
     }
 
-    // Update warehouse
     await this.warehouseRepository.update(
       { id, companyId },
       {
         ...(data.name && { name: data.name.trim() }),
-        ...(data.location && { location: data.location.trim() }),
-        ...(data.description && { description: data.description.trim() }),
+        ...(data.address && { address: data.address.trim() }),
+        ...(data.type && { type: data.type.trim() }),
         ...(data.modifiedBy && { modifiedBy: data.modifiedBy }),
       },
     );
@@ -141,8 +120,17 @@ export class WarehouseService {
   }
 
   // Delete warehouse with company access validation
-  async remove(id: string, companyId: string): Promise<void> {
+  async remove(
+    id: string,
+    companyId: string,
+    userRole: UserRole,
+  ): Promise<void> {
     await this.findOne(id, companyId);
-    await this.warehouseRepository.softDelete({ id, companyId });
+    await deleteEntityByRole(
+      this.warehouseRepository,
+      { id, companyId },
+      userRole,
+      'Warehouse',
+    );
   }
 }

@@ -7,8 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CustomerEntity } from './customer.entity';
 import { OrderEntity } from '../order/order.entity';
+import { UserRole } from '../common/types';
 import { CustomerResponse } from './dto/customer.response';
 import { validateCompanyAccess } from '../common/company-access.utils';
+import { toCustomerResponse } from '../common/entity-transformers';
+import {
+  validateCustomerEmailNotExists,
+  validateCustomerNameNotExists,
+  deleteEntityByRole,
+} from '../common/common.utils';
 
 interface CreateCustomerData {
   name: string;
@@ -23,20 +30,6 @@ interface UpdateCustomerData {
   email?: string;
   type?: string;
   modifiedBy?: string;
-}
-
-function toCustomerResponse(customer: CustomerEntity): CustomerResponse {
-  return {
-    id: customer.id,
-    companyId: customer.companyId,
-    name: customer.name,
-    email: customer.email,
-    type: customer.type,
-    createdAt: customer.createdAt,
-    updatedAt: customer.updatedAt,
-    deletedAt: customer.deletedAt,
-    modifiedBy: customer.modifiedBy,
-  };
 }
 
 @Injectable()
@@ -86,12 +79,11 @@ export class CustomerService {
   async create(data: CreateCustomerData): Promise<CustomerResponse> {
     // Check if customer with email already exists (if email provided)
     if (data.email) {
-      const existingCustomer = await this.customerRepository.findOne({
-        where: { email: data.email, companyId: data.companyId },
-      });
-      if (existingCustomer) {
-        throw new ConflictException('Customer with this email already exists');
-      }
+      await validateCustomerEmailNotExists(
+        this.customerRepository,
+        data.email,
+        data.companyId,
+      );
     }
 
     // Create customer
@@ -118,12 +110,12 @@ export class CustomerService {
 
     // Check if email is being changed and if it already exists
     if (data.email) {
-      const existingCustomer = await this.customerRepository.findOne({
-        where: { email: data.email, companyId },
-      });
-      if (existingCustomer && existingCustomer.id !== id) {
-        throw new ConflictException('Customer with this email already exists');
-      }
+      await validateCustomerEmailNotExists(
+        this.customerRepository,
+        data.email,
+        companyId,
+        id,
+      );
     }
 
     // Update customer
@@ -141,9 +133,18 @@ export class CustomerService {
   }
 
   // Delete customer with company access validation
-  async remove(id: string, companyId: string): Promise<void> {
+  async remove(
+    id: string,
+    companyId: string,
+    userRole: UserRole,
+  ): Promise<void> {
     await this.findOne(id, companyId);
-    await this.customerRepository.softDelete({ id, companyId });
+    await deleteEntityByRole(
+      this.customerRepository,
+      { id, companyId },
+      userRole,
+      'Customer',
+    );
   }
 
   // Find orders by customer ID (for field resolver)

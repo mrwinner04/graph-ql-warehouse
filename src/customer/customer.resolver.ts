@@ -89,13 +89,20 @@ export class CustomerResolver {
   }
 
   // Mutation to delete customer
-  @Mutation(() => Boolean, { description: 'Delete a customer' })
+  @Mutation(() => Boolean, {
+    description:
+      'Delete a customer (OWNER: hard delete, OPERATOR: soft delete)',
+  })
   @Roles(UserRole.OWNER, UserRole.OPERATOR)
   async deleteCustomer(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<boolean> {
-    await this.customerService.remove(id, currentUser.companyId);
+    await this.customerService.remove(
+      id,
+      currentUser.companyId,
+      currentUser.role,
+    );
     return true;
   }
 

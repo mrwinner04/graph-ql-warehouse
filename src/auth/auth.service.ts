@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+
 import { LoginInput } from './dto/login.input';
 import { RegisterInput } from './dto/register.input';
 import { LoginResponse } from './dto/login.response';
@@ -15,6 +15,8 @@ import { RegisterResponse } from './dto/register.response';
 import { UserRole } from '../common/types';
 import { UserEntity } from '../user/user.entity';
 import { CompanyEntity } from '../company/company.entity';
+import { hashPassword, comparePassword } from '../common/entity-transformers';
+import { validateUserEmailNotExists } from '../common/common.utils';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +37,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(input.password, user.password);
+    const isPasswordValid = await comparePassword(
+      input.password,
+      user.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -55,13 +60,8 @@ export class AuthService {
   }
 
   async register(input: RegisterInput): Promise<RegisterResponse> {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: input.email },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
+    // Check if user with email already exists
+    await validateUserEmailNotExists(this.userRepository, input.email);
 
     if (!input.companyName || input.companyName.trim().length === 0) {
       throw new BadRequestException('Company name is required');
@@ -73,8 +73,7 @@ export class AuthService {
 
     const savedCompany = await this.companyRepository.save(company);
 
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(input.password, saltRounds);
+    const hashedPassword = await hashPassword(input.password);
 
     const user = this.userRepository.create({
       email: input.email.toLowerCase().trim(),

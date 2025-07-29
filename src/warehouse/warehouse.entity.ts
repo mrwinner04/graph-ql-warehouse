@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Warehouse entity representing storage locations' })
+@ObjectType({ description: 'Warehouse entity representing storage addresses' })
 @Entity('warehouses')
 export class WarehouseEntity {
   @Field(() => ID, { description: 'Unique identifier for the warehouse' })
@@ -23,13 +23,16 @@ export class WarehouseEntity {
   @Column({ type: 'varchar', nullable: false })
   name: string;
 
-  @Field(() => String, { description: 'Warehouse location', nullable: true })
+  @Field(() => String, { description: 'Warehouse address', nullable: true })
   @Column({ type: 'varchar', nullable: true })
-  location?: string;
+  address?: string;
 
-  @Field(() => String, { description: 'Warehouse description', nullable: true })
-  @Column({ type: 'text', nullable: true })
-  description?: string;
+  @Field(() => String, {
+    description: 'Warehouse type (solid/liquid)',
+    nullable: true,
+  })
+  @Column({ type: 'varchar', nullable: true })
+  type?: string;
 
   @Field(() => Date, { description: 'When the warehouse was created' })
   @CreateDateColumn({

@@ -106,8 +106,10 @@ export class UserResolver {
     );
   }
 
-  @Mutation(() => Boolean, { description: 'Delete a user' })
-  @Roles(UserRole.OWNER)
+  @Mutation(() => Boolean, {
+    description: 'Delete a user (OWNER: hard delete, OPERATOR: soft delete)',
+  })
+  @Roles(UserRole.OWNER, UserRole.OPERATOR)
   async deleteUser(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -118,7 +120,7 @@ export class UserResolver {
       throw new UnauthorizedException('Cannot delete your own account');
     }
 
-    await this.userService.remove(id, currentUser.companyId);
+    await this.userService.remove(id, currentUser.companyId, currentUser.role);
     return true;
   }
 }

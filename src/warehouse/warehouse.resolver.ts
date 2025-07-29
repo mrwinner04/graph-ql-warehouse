@@ -44,13 +44,13 @@ export class WarehouseResolver {
   async createWarehouse(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('name') name: string,
-    @Args('location', { nullable: true }) location?: string,
-    @Args('description', { nullable: true }) description?: string,
+    @Args('address', { nullable: true }) address?: string,
+    @Args('type', { nullable: true }) type?: string,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.create({
       name,
-      location,
-      description,
+      address,
+      type,
       companyId: currentUser.companyId,
       modifiedBy: currentUser.id,
     });
@@ -65,15 +65,15 @@ export class WarehouseResolver {
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('id') id: string,
     @Args('name', { nullable: true }) name?: string,
-    @Args('location', { nullable: true }) location?: string,
-    @Args('description', { nullable: true }) description?: string,
+    @Args('address', { nullable: true }) address?: string,
+    @Args('type', { nullable: true }) type?: string,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.update(
       id,
       {
         name,
-        location,
-        description,
+        address,
+        type,
         modifiedBy: currentUser.id,
       },
       currentUser.companyId,
@@ -81,13 +81,20 @@ export class WarehouseResolver {
   }
 
   // Mutation to delete warehouse
-  @Mutation(() => Boolean, { description: 'Delete a warehouse' })
+  @Mutation(() => Boolean, {
+    description:
+      'Delete a warehouse (OWNER: hard delete, OPERATOR: soft delete)',
+  })
   @Roles(UserRole.OWNER, UserRole.OPERATOR)
   async deleteWarehouse(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<boolean> {
-    await this.warehouseService.remove(id, currentUser.companyId);
+    await this.warehouseService.remove(
+      id,
+      currentUser.companyId,
+      currentUser.role,
+    );
     return true;
   }
 }

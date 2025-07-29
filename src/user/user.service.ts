@@ -5,12 +5,21 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+
 import { UserEntity } from './user.entity';
 import { CompanyEntity } from '../company/company.entity';
 import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { UserResponse } from './dto/user.response';
+import {
+  toUserResponse,
+  hashPassword,
+  comparePassword,
+} from '../common/entity-transformers';
+import {
+  validateUserEmailNotExists,
+  deleteEntityByRole,
+} from '../common/common.utils';
 
 interface CreateUserData {
   email: string;
@@ -27,19 +36,6 @@ interface UpdateUserData {
   password?: string;
 }
 
-function toUserResponse(user: UserEntity): UserResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    companyId: user.companyId,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-    deletedAt: user.deletedAt,
-  };
-}
-
 @Injectable()
 export class UserService {
   constructor(
@@ -50,7 +46,7 @@ export class UserService {
   ) {}
 
   async validatePassword(user: UserEntity, password: string): Promise<boolean> {
-    return bcrypt.compare(password, user.password);
+    return comparePassword(password, user.password);
   }
 
   async findAll(companyId: string): Promise<UserResponse[]> {
@@ -115,15 +111,10 @@ export class UserService {
   }
 
   async create(data: CreateUserData): Promise<UserResponse> {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: data.email },
-    });
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
-    }
+    // Check if user with email already exists
+    await validateUserEmailNotExists(this.userRepository, data.email);
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+    const hashedPassword = await hashPassword(data.password);
 
     const user = this.userRepository.create({
       email: data.email.toLowerCase().trim(),
@@ -143,18 +134,13 @@ export class UserService {
     companyId: string,
   ): Promise<Omit<UserEntity, 'password'>> {
     if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10);
+      data.password = await hashPassword(data.password);
     }
 
     await this.findOne(id, companyId);
 
     if (data.email) {
-      const existingUser = await this.userRepository.findOne({
-        where: { email: data.email },
-      });
-      if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('User with this email already exists');
-      }
+      await validateUserEmailNotExists(this.userRepository, data.email, id);
     }
 
     await this.userRepository.update(
@@ -170,8 +156,17 @@ export class UserService {
     return this.findOne(id, companyId);
   }
 
-  async remove(id: string, companyId: string): Promise<void> {
+  async remove(
+    id: string,
+    companyId: string,
+    userRole: UserRole,
+  ): Promise<void> {
     await this.findOne(id, companyId);
-    await this.userRepository.softDelete({ id, companyId });
+    await deleteEntityByRole(
+      this.userRepository,
+      { id, companyId },
+      userRole,
+      'User',
+    );
   }
 }
