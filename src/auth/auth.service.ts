@@ -16,7 +16,7 @@ import { UserRole } from '../common/types';
 import { UserEntity } from '../user/user.entity';
 import { CompanyEntity } from '../company/company.entity';
 import { hashPassword, comparePassword } from '../common/entity-transformers';
-import { validateUserEmailNotExists } from '../common/common.utils';
+import { validateFieldNotExistsGlobally } from '../common/common.utils';
 
 @Injectable()
 export class AuthService {
@@ -60,8 +60,14 @@ export class AuthService {
   }
 
   async register(input: RegisterInput): Promise<RegisterResponse> {
-    // Check if user with email already exists
-    await validateUserEmailNotExists(this.userRepository, input.email);
+    await validateFieldNotExistsGlobally(
+      this.userRepository,
+      'email',
+      input.email,
+      'User',
+      undefined,
+      (value) => value.toLowerCase().trim(),
+    );
 
     if (!input.companyName || input.companyName.trim().length === 0) {
       throw new BadRequestException('Company name is required');

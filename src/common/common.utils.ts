@@ -17,83 +17,59 @@ export async function assertNotExists<T extends object>(
   }
 }
 
-export async function validateUserEmailNotExists(
-  userRepo: Repository<any>,
-  email: string,
-  excludeId?: string,
-): Promise<void> {
-  const existingUser = await userRepo.findOne({
-    where: { email: email.toLowerCase().trim() },
-  });
-
-  if (existingUser && existingUser.id !== excludeId) {
-    throw new ConflictException('User with this email already exists');
-  }
-}
-
-export async function validateCustomerEmailNotExists(
-  customerRepo: Repository<any>,
-  email: string,
+export async function validateFieldNotExistsInCompany<
+  T extends { id?: string },
+>(
+  repo: Repository<T>,
+  field: string,
+  value: string,
   companyId: string,
+  entityName: string,
   excludeId?: string,
+  transformValue?: (value: string) => string,
 ): Promise<void> {
-  if (!email) return; // Skip validation if no email provided
+  if (!value) return; // Skip validation if no value provided
 
-  const existingCustomer = await customerRepo.findOne({
-    where: { email: email.toLowerCase().trim(), companyId },
+  const transformedValue = transformValue
+    ? transformValue(value)
+    : value.trim();
+
+  const existing = await repo.findOne({
+    where: { [field]: transformedValue, companyId } as any,
   });
 
-  if (existingCustomer && existingCustomer.id !== excludeId) {
+  if (existing && existing.id !== excludeId) {
     throw new ConflictException(
-      'Customer with this email already exists in your company',
+      `${entityName} with this ${field} already exists in your company`,
     );
   }
 }
 
-export async function validateWarehouseNameNotExists(
-  warehouseRepo: Repository<any>,
-  name: string,
-  companyId: string,
+export async function validateFieldNotExistsGlobally<T extends { id?: string }>(
+  repo: Repository<T>,
+  field: string,
+  value: string,
+  entityName: string,
   excludeId?: string,
+  transformValue?: (value: string) => string,
 ): Promise<void> {
-  const existingWarehouse = await warehouseRepo.findOne({
-    where: { name: name.trim(), companyId },
+  if (!value) return; // Skip validation if no value provided
+
+  const transformedValue = transformValue
+    ? transformValue(value)
+    : value.trim();
+
+  const existing = await repo.findOne({
+    where: { [field]: transformedValue } as any,
   });
 
-  if (existingWarehouse && existingWarehouse.id !== excludeId) {
+  if (existing && existing.id !== excludeId) {
     throw new ConflictException(
-      'Warehouse with this name already exists in your company',
+      `${entityName} with this ${field} already exists`,
     );
   }
 }
 
-export async function validateCustomerNameNotExists(
-  customerRepo: Repository<any>,
-  name: string,
-  companyId: string,
-  excludeId?: string,
-): Promise<void> {
-  const existingCustomer = await customerRepo.findOne({
-    where: { name: name.trim(), companyId },
-  });
-
-  if (existingCustomer && existingCustomer.id !== excludeId) {
-    throw new ConflictException(
-      'Customer with this name already exists in your company',
-    );
-  }
-}
-
-/**
- * Delete entity based on user role
- * - OWNER: Hard delete (permanent removal)
- * - OPERATOR: Soft delete (mark as deleted)
- * - VIEWER: Cannot delete (throws error)
- * @param repo - TypeORM repository
- * @param where - Where conditions to identify the entity
- * @param userRole - Role of the user performing the delete
- * @param entityName - Name of the entity for error messages
- */
 export async function deleteEntityByRole<T extends object>(
   repo: Repository<T>,
   where: FindOptionsWhere<T>,

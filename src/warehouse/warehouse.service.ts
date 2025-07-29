@@ -9,9 +9,9 @@ import { WarehouseEntity } from './warehouse.entity';
 import { WarehouseResponse } from './dto/warehouse.response';
 import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
-import { toWarehouseResponse } from '../common/entity-transformers';
+import { transformEntity } from '../common/entity-transformers';
 import {
-  validateWarehouseNameNotExists,
+  validateFieldNotExistsInCompany,
   deleteEntityByRole,
 } from '../common/common.utils';
 
@@ -42,7 +42,9 @@ export class WarehouseService {
       where: { companyId },
       order: { createdAt: 'DESC' },
     });
-    return warehouses.map(toWarehouseResponse);
+    return warehouses.map(
+      (warehouse) => transformEntity(warehouse) as WarehouseResponse,
+    );
   }
 
   // Find warehouse by ID with company access validation
@@ -56,7 +58,7 @@ export class WarehouseService {
       'Warehouse',
     );
 
-    return toWarehouseResponse(warehouse);
+    return transformEntity(warehouse) as WarehouseResponse;
   }
 
   // Find warehouse by ID (for internal use)
@@ -71,10 +73,14 @@ export class WarehouseService {
   }
 
   async create(data: CreateWarehouseData): Promise<WarehouseResponse> {
-    await validateWarehouseNameNotExists(
+    await validateFieldNotExistsInCompany(
       this.warehouseRepository,
+      'name',
       data.name,
       data.companyId,
+      'Warehouse',
+      undefined,
+      (value) => value.trim(),
     );
 
     const warehouse = this.warehouseRepository.create({
@@ -86,7 +92,7 @@ export class WarehouseService {
     });
 
     const savedWarehouse = await this.warehouseRepository.save(warehouse);
-    return toWarehouseResponse(savedWarehouse);
+    return transformEntity(savedWarehouse) as WarehouseResponse;
   }
 
   // Update warehouse with company access validation
@@ -98,11 +104,14 @@ export class WarehouseService {
     await this.findOne(id, companyId);
 
     if (data.name) {
-      await validateWarehouseNameNotExists(
+      await validateFieldNotExistsInCompany(
         this.warehouseRepository,
+        'name',
         data.name,
         companyId,
+        'Warehouse',
         id,
+        (value) => value.trim(),
       );
     }
 

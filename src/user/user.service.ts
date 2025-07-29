@@ -12,12 +12,12 @@ import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { UserResponse } from './dto/user.response';
 import {
-  toUserResponse,
+  transformEntity,
   hashPassword,
   comparePassword,
 } from '../common/entity-transformers';
 import {
-  validateUserEmailNotExists,
+  validateFieldNotExistsGlobally,
   deleteEntityByRole,
 } from '../common/common.utils';
 
@@ -54,7 +54,9 @@ export class UserService {
       where: { companyId },
       order: { createdAt: 'DESC' },
     });
-    return users.map(toUserResponse);
+    return users.map(
+      (user) => transformEntity(user, ['password']) as UserResponse,
+    );
   }
 
   async findOne(
@@ -107,12 +109,21 @@ export class UserService {
       where: { companyId },
       order: { createdAt: 'DESC' },
     });
-    return users.map(toUserResponse);
+    return users.map(
+      (user) => transformEntity(user, ['password']) as UserResponse,
+    );
   }
 
   async create(data: CreateUserData): Promise<UserResponse> {
     // Check if user with email already exists
-    await validateUserEmailNotExists(this.userRepository, data.email);
+    await validateFieldNotExistsGlobally(
+      this.userRepository,
+      'email',
+      data.email,
+      'User',
+      undefined,
+      (value) => value.toLowerCase().trim(),
+    );
 
     const hashedPassword = await hashPassword(data.password);
 
@@ -125,7 +136,7 @@ export class UserService {
     });
 
     const savedUser = await this.userRepository.save(user);
-    return toUserResponse(savedUser);
+    return transformEntity(savedUser, ['password']) as UserResponse;
   }
 
   async update(
@@ -140,7 +151,14 @@ export class UserService {
     await this.findOne(id, companyId);
 
     if (data.email) {
-      await validateUserEmailNotExists(this.userRepository, data.email, id);
+      await validateFieldNotExistsGlobally(
+        this.userRepository,
+        'email',
+        data.email,
+        'User',
+        id,
+        (value) => value.toLowerCase().trim(),
+      );
     }
 
     await this.userRepository.update(

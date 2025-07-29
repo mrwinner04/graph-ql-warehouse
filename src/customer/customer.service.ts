@@ -10,10 +10,9 @@ import { OrderEntity } from '../order/order.entity';
 import { UserRole } from '../common/types';
 import { CustomerResponse } from './dto/customer.response';
 import { validateCompanyAccess } from '../common/company-access.utils';
-import { toCustomerResponse } from '../common/entity-transformers';
+import { transformEntity } from '../common/entity-transformers';
 import {
-  validateCustomerEmailNotExists,
-  validateCustomerNameNotExists,
+  validateFieldNotExistsInCompany,
   deleteEntityByRole,
 } from '../common/common.utils';
 
@@ -47,7 +46,9 @@ export class CustomerService {
       where: { companyId },
       order: { createdAt: 'DESC' },
     });
-    return customers.map(toCustomerResponse);
+    return customers.map(
+      (customer) => transformEntity(customer) as CustomerResponse,
+    );
   }
 
   // Find customer by ID with company access validation
@@ -61,7 +62,7 @@ export class CustomerService {
       'Customer',
     );
 
-    return toCustomerResponse(customer);
+    return transformEntity(customer) as CustomerResponse;
   }
 
   // Find customer by ID (for internal use)
@@ -79,10 +80,14 @@ export class CustomerService {
   async create(data: CreateCustomerData): Promise<CustomerResponse> {
     // Check if customer with email already exists (if email provided)
     if (data.email) {
-      await validateCustomerEmailNotExists(
+      await validateFieldNotExistsInCompany(
         this.customerRepository,
+        'email',
         data.email,
         data.companyId,
+        'Customer',
+        undefined,
+        (value) => value.toLowerCase().trim(),
       );
     }
 
@@ -96,7 +101,7 @@ export class CustomerService {
     });
 
     const savedCustomer = await this.customerRepository.save(customer);
-    return toCustomerResponse(savedCustomer);
+    return transformEntity(savedCustomer) as CustomerResponse;
   }
 
   // Update customer with company access validation
@@ -110,11 +115,14 @@ export class CustomerService {
 
     // Check if email is being changed and if it already exists
     if (data.email) {
-      await validateCustomerEmailNotExists(
+      await validateFieldNotExistsInCompany(
         this.customerRepository,
+        'email',
         data.email,
         companyId,
+        'Customer',
         id,
+        (value) => value.toLowerCase().trim(),
       );
     }
 
