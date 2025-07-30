@@ -1,23 +1,23 @@
 import { ObjectType, Field } from '@nestjs/graphql';
 import { UserRole } from '../../common/types';
 
-@ObjectType({ description: 'Authentication response' })
+@ObjectType()
 export class AuthResponse {
-  @Field(() => String, { description: 'JWT access token' })
+  @Field(() => String)
   accessToken: string;
 
-  @Field(() => String, { description: 'User ID' })
+  @Field(() => String)
   userId: string;
 
-  @Field(() => String, { description: 'User email' })
+  @Field(() => String)
   email: string;
 
-  @Field(() => String, { description: 'User name' })
+  @Field(() => String)
   name: string;
 
-  @Field(() => UserRole, { description: 'User role' })
+  @Field(() => UserRole)
   role: UserRole;
 
-  @Field(() => String, { description: 'Company ID' })
+  @Field(() => String)
   companyId: string;
 }

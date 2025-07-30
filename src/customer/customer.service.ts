@@ -1,25 +1,22 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CustomerEntity } from './customer.entity';
+import { CustomerResponse } from './dto/customer.response';
 import { OrderEntity } from '../order/order.entity';
 import { UserRole } from '../common/types';
-import { CustomerResponse } from './dto/customer.response';
-import { validateCompanyAccess } from '../common/company-access.utils';
-import { transformEntity } from '../common/entity-transformers';
 import {
   validateFieldNotExistsInCompany,
   deleteEntityByRole,
 } from '../common/common.utils';
+import { transformEntity } from '../common/entity-transformers';
+import { validateCompanyAccess } from '../common/company-access.utils';
+import { CustomerType } from './customer.entity';
 
 interface CreateCustomerData {
   name: string;
   email?: string;
-  type?: string;
+  type: CustomerType;
   companyId: string;
   modifiedBy?: string;
 }
@@ -27,7 +24,7 @@ interface CreateCustomerData {
 interface UpdateCustomerData {
   name?: string;
   email?: string;
-  type?: string;
+  type?: CustomerType;
   modifiedBy?: string;
 }
 
@@ -40,7 +37,6 @@ export class CustomerService {
     private readonly orderRepository: Repository<OrderEntity>,
   ) {}
 
-  // Find all customers in a company
   async findAll(companyId: string): Promise<CustomerResponse[]> {
     const customers = await this.customerRepository.find({
       where: { companyId },
@@ -51,7 +47,6 @@ export class CustomerService {
     );
   }
 
-  // Find customer by ID with company access validation
   async findOne(id: string, companyId: string): Promise<CustomerResponse> {
     const customer = await validateCompanyAccess(
       () =>
@@ -65,7 +60,6 @@ export class CustomerService {
     return transformEntity(customer) as CustomerResponse;
   }
 
-  // Find customer by ID (for internal use)
   async findById(id: string): Promise<CustomerEntity> {
     const customer = await this.customerRepository.findOne({
       where: { id },
@@ -76,9 +70,7 @@ export class CustomerService {
     return customer;
   }
 
-  // Create new customer
   async create(data: CreateCustomerData): Promise<CustomerResponse> {
-    // Check if customer with email already exists (if email provided)
     if (data.email) {
       await validateFieldNotExistsInCompany(
         this.customerRepository,
@@ -95,7 +87,7 @@ export class CustomerService {
     const customer = this.customerRepository.create({
       name: data.name.trim(),
       email: data.email?.toLowerCase().trim(),
-      type: data.type?.trim(),
+      type: data.type,
       companyId: data.companyId,
       modifiedBy: data.modifiedBy,
     });
@@ -132,7 +124,7 @@ export class CustomerService {
       {
         ...(data.name && { name: data.name.trim() }),
         ...(data.email && { email: data.email.toLowerCase().trim() }),
-        ...(data.type && { type: data.type.trim() }),
+        ...(data.type && { type: data.type }),
         ...(data.modifiedBy && { modifiedBy: data.modifiedBy }),
       },
     );
@@ -140,7 +132,6 @@ export class CustomerService {
     return this.findOne(id, companyId);
   }
 
-  // Delete customer with company access validation
   async remove(
     id: string,
     companyId: string,
@@ -155,7 +146,6 @@ export class CustomerService {
     );
   }
 
-  // Find orders by customer ID (for field resolver)
   async findOrdersByCustomerId(customerId: string): Promise<OrderEntity[]> {
     return this.orderRepository.find({
       where: { customerId },

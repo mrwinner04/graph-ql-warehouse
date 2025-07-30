@@ -16,25 +16,24 @@ export enum OrderType {
 
 registerEnumType(OrderType, {
   name: 'OrderType',
-  description: 'Order types in the system',
 });
 
-@ObjectType({ description: 'Order entity representing customer orders' })
+@ObjectType()
 @Entity('orders')
 export class OrderEntity {
-  @Field(() => ID, { description: 'Unique identifier for the order' })
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field(() => String, { description: 'Company ID the order belongs to' })
+  @Field(() => String)
   @Column({ type: 'uuid', name: 'company_id', nullable: false })
   companyId: string;
 
-  @Field(() => String, { description: 'Order number' })
+  @Field(() => String)
   @Column({ type: 'varchar', nullable: false })
   number: string;
 
-  @Field(() => OrderType, { description: 'Order type' })
+  @Field(() => OrderType)
   @Column({
     type: 'enum',
     enum: OrderType,
@@ -43,15 +42,15 @@ export class OrderEntity {
   })
   type: OrderType;
 
-  @Field(() => String, { description: 'Customer ID' })
+  @Field(() => String)
   @Column({ type: 'uuid', name: 'customer_id', nullable: false })
   customerId: string;
 
-  @Field(() => String, { description: 'Warehouse ID' })
+  @Field(() => String)
   @Column({ type: 'uuid', name: 'warehouse_id', nullable: false })
   warehouseId: string;
 
-  @Field(() => Date, { description: 'Order date' })
+  @Field(() => Date)
   @Column({
     type: 'timestamp',
     nullable: false,
@@ -59,7 +58,7 @@ export class OrderEntity {
   })
   date: Date;
 
-  @Field(() => Date, { description: 'When the order was created' })
+  @Field(() => Date)
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamp',
@@ -68,7 +67,7 @@ export class OrderEntity {
   })
   createdAt: Date;
 
-  @Field(() => Date, { description: 'When the order was last updated' })
+  @Field(() => Date)
   @UpdateDateColumn({
     name: 'updated_at',
     type: 'timestamp',
@@ -81,7 +80,6 @@ export class OrderEntity {
   deletedAt?: Date;
 
   @Field(() => String, {
-    description: 'ID of user who last modified the order',
     nullable: true,
   })
   @Column({ type: 'uuid', name: 'modified_by', nullable: true })

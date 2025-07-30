@@ -1,8 +1,12 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, UsePipes } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../decorator/roles.decorator';
+import {
+  Roles,
+  OwnerAndOperator,
+  AllRoles,
+} from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
@@ -11,26 +15,27 @@ import { WarehouseService } from './warehouse.service';
 import { WarehouseResponse } from './dto/warehouse.response';
 import { CreateWarehouseInput } from './dto/create-warehouse.input';
 import { UpdateWarehouseInput } from './dto/update-warehouse.input';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import {
+  CreateWarehouseSchema,
+  UpdateWarehouseSchema,
+} from './warehouse.types';
 
 @Resolver(() => WarehouseEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class WarehouseResolver {
   constructor(private readonly warehouseService: WarehouseService) {}
 
-  // Query to get all warehouses in the company
-  @Query(() => [WarehouseResponse], {
-    description: 'Get all warehouses in the same company',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => [WarehouseResponse])
+  @AllRoles()
   async warehouses(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WarehouseResponse[]> {
     return await this.warehouseService.findAll(user.companyId);
   }
 
-  // Query to get a specific warehouse by ID
-  @Query(() => WarehouseResponse, { description: 'Get a warehouse by ID' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => WarehouseResponse)
+  @AllRoles()
   async warehouse(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -38,11 +43,9 @@ export class WarehouseResolver {
     return await this.warehouseService.findOne(id, currentUser.companyId);
   }
 
-  // Mutation to create a new warehouse
-  @Mutation(() => WarehouseResponse, {
-    description: 'Create a new warehouse in the company',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => WarehouseResponse)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(CreateWarehouseSchema))
   async createWarehouse(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('input') input: CreateWarehouseInput,
@@ -54,11 +57,9 @@ export class WarehouseResolver {
     });
   }
 
-  // Mutation to update warehouse
-  @Mutation(() => WarehouseResponse, {
-    description: 'Update warehouse information',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => WarehouseResponse)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(UpdateWarehouseSchema))
   async updateWarehouse(
     @Args('id') id: string,
     @Args('input') input: UpdateWarehouseInput,
@@ -74,12 +75,8 @@ export class WarehouseResolver {
     );
   }
 
-  // Mutation to delete warehouse
-  @Mutation(() => Boolean, {
-    description:
-      'Delete a warehouse (OWNER: hard delete, OPERATOR: soft delete)',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => Boolean)
+  @OwnerAndOperator()
   async deleteWarehouse(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,

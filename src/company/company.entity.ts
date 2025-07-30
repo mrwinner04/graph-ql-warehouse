@@ -8,22 +8,22 @@ import {
 } from 'typeorm';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Company entity representing tenant companies' })
+@ObjectType()
 @Entity('companies')
 export class CompanyEntity {
-  @Field(() => ID, { description: 'Unique identifier for the company' })
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field(() => String, { description: 'Company name' })
+  @Field(() => String)
   @Column({ type: 'varchar', nullable: false })
   name: string;
 
-  @Field(() => Date, { description: 'When the company was created' })
+  @Field(() => Date)
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @Field(() => Date, { description: 'When the company was last updated' })
+  @Field(() => Date)
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 

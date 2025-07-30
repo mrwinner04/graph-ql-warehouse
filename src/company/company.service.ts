@@ -60,7 +60,6 @@ export class CompanyService {
     });
   }
 
-  // CRUD operations
   async findAll(): Promise<CompanyEntity[]> {
     return this.companyRepository.find({
       order: { createdAt: 'DESC' },

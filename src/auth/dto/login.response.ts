@@ -1,7 +1,7 @@
 import { ObjectType, Field } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Login response containing only the access token' })
+@ObjectType()
 export class LoginResponse {
-  @Field(() => String, { description: 'JWT access token' })
+  @Field(() => String)
   accessToken: string;
 }

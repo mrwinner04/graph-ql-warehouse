@@ -1,20 +1,20 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { OrderType } from '../order.entity';
 
-@InputType({ description: 'Input type for creating an order' })
+@InputType()
 export class CreateOrderInput {
-  @Field(() => String, { description: 'Order number', nullable: true })
+  @Field(() => String)
   number?: string;
 
-  @Field(() => OrderType, { description: 'Order type' })
+  @Field(() => OrderType)
   type: OrderType;
 
-  @Field(() => String, { description: 'Customer ID' })
+  @Field(() => String)
   customerId: string;
 
-  @Field(() => String, { description: 'Warehouse ID' })
+  @Field(() => String)
   warehouseId: string;
 
-  @Field(() => Date, { description: 'Order date', nullable: true })
+  @Field(() => Date)
   date?: Date;
 }

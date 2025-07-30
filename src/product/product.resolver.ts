@@ -1,14 +1,22 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, UsePipes } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../decorator/roles.decorator';
+import {
+  Roles,
+  OwnerAndOperator,
+  AllRoles,
+} from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { ProductEntity, ProductType } from './product.entity';
+import { ProductEntity } from './product.entity';
 import { ProductService } from './product.service';
 import { ProductResponse } from './dto/product.response';
+import { CreateProductInput } from './dto/create-product.input';
+import { UpdateProductInput } from './dto/update-product.input';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { CreateProductSchema, UpdateProductSchema } from './product.types';
 
 @Resolver(() => ProductEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,10 +24,8 @@ export class ProductResolver {
   constructor(private readonly productService: ProductService) {}
 
   // Query to get all products in the company
-  @Query(() => [ProductResponse], {
-    description: 'Get all products in the same company',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => [ProductResponse])
+  @AllRoles()
   async products(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProductResponse[]> {
@@ -27,8 +33,8 @@ export class ProductResolver {
   }
 
   // Query to get a specific product by ID
-  @Query(() => ProductResponse, { description: 'Get a product by ID' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => ProductResponse)
+  @AllRoles()
   async product(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -37,47 +43,33 @@ export class ProductResolver {
   }
 
   // Mutation to create a new product
-  @Mutation(() => ProductResponse, {
-    description: 'Create a new product in the company',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => ProductResponse)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(CreateProductSchema))
   async createProduct(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('name') name: string,
-    @Args('price') price: string,
-    @Args('type') type: ProductType,
-    @Args('code', { nullable: true }) code?: string,
+    @Args('input') input: CreateProductInput,
   ): Promise<ProductResponse> {
     return await this.productService.create({
-      name,
-      code,
-      price,
-      type,
+      ...input,
       companyId: currentUser.companyId,
       modifiedBy: currentUser.id,
     });
   }
 
   // Mutation to update product
-  @Mutation(() => ProductResponse, {
-    description: 'Update product information',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => ProductResponse)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(UpdateProductSchema))
   async updateProduct(
-    @CurrentUser() currentUser: AuthenticatedUser,
     @Args('id') id: string,
-    @Args('name', { nullable: true }) name?: string,
-    @Args('code', { nullable: true }) code?: string,
-    @Args('price', { nullable: true }) price?: string,
-    @Args('type', { nullable: true }) type?: ProductType,
+    @Args('input') input: UpdateProductInput,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProductResponse> {
     return await this.productService.update(
       id,
       {
-        name,
-        code,
-        price,
-        type,
+        ...input,
         modifiedBy: currentUser.id,
       },
       currentUser.companyId,
@@ -85,10 +77,8 @@ export class ProductResolver {
   }
 
   // Mutation to delete product
-  @Mutation(() => Boolean, {
-    description: 'Delete a product (OWNER: hard delete, OPERATOR: soft delete)',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => Boolean)
+  @OwnerAndOperator()
   async deleteProduct(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,

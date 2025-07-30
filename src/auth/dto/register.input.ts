@@ -2,27 +2,26 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 import { UserRole } from '../../common/types';
 
-@InputType({ description: 'Input for user registration' })
+@InputType()
 export class RegisterInput {
-  @Field(() => String, { description: 'User email address' })
+  @Field(() => String)
   @IsEmail()
   email: string;
 
-  @Field(() => String, { description: 'User password' })
+  @Field(() => String)
   @IsString()
   @MinLength(6)
   password: string;
 
-  @Field(() => String, { description: 'User full name' })
+  @Field(() => String)
   @IsString()
   name: string;
 
-  @Field(() => String, { description: 'Company name' })
+  @Field(() => String)
   @IsString()
   companyName: string;
 
   @Field(() => UserRole, {
-    description: 'User role',
     defaultValue: UserRole.VIEWER,
   })
   @IsOptional()

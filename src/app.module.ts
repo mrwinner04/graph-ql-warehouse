@@ -18,9 +18,6 @@ import { InvoiceModule } from './invoice/invoice.module';
 import { DevModule } from './dev/dev.module';
 import { dbConfig } from './db.config';
 import { GraphQLError } from './common/graphql-context';
-import { AppResolver } from './app.resolver';
-
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 @Module({
   imports: [
@@ -45,7 +42,6 @@ import { AppResolver } from './app.resolver';
 
     TypeOrmModule.forRoot(dbConfig),
 
-    // Application modules
     AuthModule,
     CompanyModule,
     UserModule,
@@ -59,7 +55,6 @@ import { AppResolver } from './app.resolver';
   ],
 
   providers: [
-    AppResolver,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

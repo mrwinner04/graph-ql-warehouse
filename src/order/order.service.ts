@@ -20,6 +20,7 @@ import {
 import { validateProductWarehouseCompatibility } from '../common/type-validation.utils';
 import { ProductService } from '../product/product.service';
 import { WarehouseService } from '../warehouse/warehouse.service';
+import { InvoiceService } from '../invoice/invoice.service';
 
 interface CreateOrderData {
   number?: string;
@@ -48,6 +49,7 @@ export class OrderService {
     private readonly orderRepository: Repository<OrderEntity>,
     private readonly productService: ProductService,
     private readonly warehouseService: WarehouseService,
+    private readonly invoiceService: InvoiceService,
   ) {}
 
   // Find all orders for a company
@@ -127,6 +129,25 @@ export class OrderService {
     });
 
     const savedOrder = await this.orderRepository.save(order);
+
+    // Automatically create an invoice for the order
+    try {
+      await this.invoiceService.createForOrder(
+        savedOrder.id,
+        data.companyId,
+        data.modifiedBy,
+      );
+      console.log(
+        `✅ Invoice created automatically for order ${savedOrder.number}`,
+      );
+    } catch (error) {
+      console.error(
+        `❌ Failed to create invoice for order ${savedOrder.number}:`,
+        error.message,
+      );
+      // Don't fail the order creation if invoice creation fails
+    }
+
     return transformEntity(savedOrder) as OrderResponse;
   }
 

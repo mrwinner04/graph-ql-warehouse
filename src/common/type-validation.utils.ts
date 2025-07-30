@@ -6,7 +6,6 @@ export function validateProductWarehouseCompatibility(
   productType: ProductType,
   warehouseType: WarehouseType,
 ): void {
-  // Check if product and warehouse types match (compare string values)
   if (productType.toString() !== warehouseType.toString()) {
     throw new BadRequestException(
       `Product type '${productType}' is not compatible with warehouse type '${warehouseType}'. ` +

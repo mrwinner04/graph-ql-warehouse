@@ -115,7 +115,6 @@ export class UserService {
   }
 
   async create(data: CreateUserData): Promise<UserResponse> {
-    // Check if user with email already exists
     await validateFieldNotExistsGlobally(
       this.userRepository,
       'email',

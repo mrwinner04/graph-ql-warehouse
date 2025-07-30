@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Order item entity representing items in an order' })
+@ObjectType()
 @Entity('order_items')
 export class OrderItemEntity {
   @Field(() => ID, { description: 'Unique identifier for the order item' })

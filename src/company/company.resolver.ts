@@ -6,10 +6,15 @@ import {
   ResolveField,
   Parent,
 } from '@nestjs/graphql';
-import { UseGuards, UnauthorizedException } from '@nestjs/common';
+import { UseGuards, UsePipes, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../decorator/roles.decorator';
+import {
+  Roles,
+  OwnerOnly,
+  OwnerAndOperator,
+  AllRoles,
+} from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { UserRole } from '../common/types';
 import { CompanyEntity } from './company.entity';
@@ -20,28 +25,23 @@ import { CustomerEntity } from '../customer/customer.entity';
 import { InvoiceEntity } from '../invoice/invoice.entity';
 import { CompanyService } from './company.service';
 import { AuthenticatedUser } from '../common/graphql-context';
+import { UpdateCompanyInput } from './dto/update-company.input';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { UpdateCompanySchema } from './company.types';
 
 @Resolver(() => CompanyEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CompanyResolver {
   constructor(private readonly companyService: CompanyService) {}
 
-  @Query(() => CompanyEntity, { description: "Get the current user's company" })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
-  async myCompany(@CurrentUser() user: any): Promise<CompanyEntity> {
-    return await this.companyService.findById(user.companyId);
-  }
-
-  @Query(() => [CompanyEntity], {
-    description: 'Get all companies (OWNER only)',
-  })
-  @Roles(UserRole.OWNER)
+  @Query(() => [CompanyEntity])
+  @OwnerOnly()
   async companies(): Promise<CompanyEntity[]> {
     return await this.companyService.findAll();
   }
 
-  @Query(() => CompanyEntity, { description: 'Get a company by ID' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => CompanyEntity)
+  @AllRoles()
   async company(
     @Args('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -52,51 +52,41 @@ export class CompanyResolver {
     return await this.companyService.findById(id);
   }
 
-  @Mutation(() => CompanyEntity, { description: 'Update company information' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => CompanyEntity)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(UpdateCompanySchema))
   async updateCompany(
     @Args('id') id: string,
-    @Args('name') name: string,
+    @Args('input') input: UpdateCompanyInput,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CompanyEntity> {
     if (user.companyId !== id && user.role !== UserRole.OWNER) {
       throw new UnauthorizedException('Access denied');
     }
-    return await this.companyService.update(id, { name });
+    return await this.companyService.update(id, input);
   }
 
-  // Field resolvers for relationships
-  @ResolveField(() => [UserEntity], {
-    description: 'Users belonging to this company',
-  })
+  @ResolveField(() => [UserEntity])
   async users(@Parent() company: CompanyEntity): Promise<UserEntity[]> {
     return this.companyService.findUsersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [ProductEntity], {
-    description: 'Products belonging to this company',
-  })
+  @ResolveField(() => [ProductEntity])
   async products(@Parent() company: CompanyEntity): Promise<ProductEntity[]> {
     return this.companyService.findProductsByCompanyId(company.id);
   }
 
-  @ResolveField(() => [OrderEntity], {
-    description: 'Orders belonging to this company',
-  })
+  @ResolveField(() => [OrderEntity])
   async orders(@Parent() company: CompanyEntity): Promise<OrderEntity[]> {
     return this.companyService.findOrdersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [CustomerEntity], {
-    description: 'Customers belonging to this company',
-  })
+  @ResolveField(() => [CustomerEntity])
   async customers(@Parent() company: CompanyEntity): Promise<CustomerEntity[]> {
     return this.companyService.findCustomersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [InvoiceEntity], {
-    description: 'Invoices belonging to this company',
-  })
+  @ResolveField(() => [InvoiceEntity])
   async invoices(@Parent() company: CompanyEntity): Promise<InvoiceEntity[]> {
     return this.companyService.findInvoicesByCompanyId(company.id);
   }

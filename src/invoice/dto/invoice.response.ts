@@ -1,8 +1,8 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { CustomerType } from '../customer.entity';
+import { InvoiceStatus } from '../invoice.entity';
 
 @ObjectType()
-export class CustomerResponse {
+export class InvoiceResponse {
   @Field(() => ID)
   id: string;
 
@@ -10,15 +10,16 @@ export class CustomerResponse {
   companyId: string;
 
   @Field(() => String)
-  name: string;
+  orderId: string;
 
-  @Field(() => String, {
-    nullable: true,
-  })
-  email?: string;
+  @Field(() => String)
+  number: string;
 
-  @Field(() => CustomerType)
-  type: CustomerType;
+  @Field(() => Date)
+  date: Date;
+
+  @Field(() => InvoiceStatus)
+  status: InvoiceStatus;
 
   @Field(() => Date, {
     nullable: true,

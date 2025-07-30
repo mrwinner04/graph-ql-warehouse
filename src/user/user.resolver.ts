@@ -1,44 +1,37 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import {
-  UseGuards,
-  UnauthorizedException,
-  BadRequestException,
-} from '@nestjs/common';
+import { UseGuards, UsePipes, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../decorator/roles.decorator';
+import {
+  Roles,
+  OwnerOnly,
+  OwnerAndOperator,
+  AllRoles,
+} from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { UserEntity } from './user.entity';
 import { UserService } from './user.service';
 import { UserResponse } from './dto/user.response';
-
-function toUserRole(role: unknown): UserRole | undefined {
-  if (
-    typeof role === 'string' &&
-    (role === 'OWNER' || role === 'OPERATOR' || role === 'VIEWER')
-  ) {
-    return UserRole[role as keyof typeof UserRole];
-  }
-  return undefined;
-}
+import { CreateUserInput } from './dto/create-user.input';
+import { UpdateUserInput } from './dto/update-user.input';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { CreateUserSchema, UpdateUserSchema } from './user.types';
 
 @Resolver(() => UserEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UserResolver {
   constructor(private readonly userService: UserService) {}
 
-  @Query(() => [UserResponse], {
-    description: 'Get all users in the same company',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Query(() => [UserResponse])
+  @OwnerAndOperator()
   async users(@CurrentUser() user: AuthenticatedUser): Promise<UserResponse[]> {
     return await this.userService.findAll(user.companyId);
   }
 
-  @Query(() => UserResponse, { description: 'Get a user by ID' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR, UserRole.VIEWER)
+  @Query(() => UserResponse)
+  @AllRoles()
   async user(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -46,70 +39,39 @@ export class UserResolver {
     return await this.userService.findOne(id, currentUser.companyId);
   }
 
-  @Mutation(() => UserResponse, {
-    description: 'Create a new user in the company',
-  })
-  @Roles(UserRole.OWNER)
+  @Mutation(() => UserResponse)
+  @OwnerOnly()
+  @UsePipes(new ZodValidationPipe(CreateUserSchema))
   async createUser(
-    @Args('email') email: string,
-    @Args('password') password: string,
-    @Args('name') name: string,
-    @Args('role') role: string,
     @CurrentUser() currentUser: AuthenticatedUser,
+    @Args('input') input: CreateUserInput,
   ): Promise<UserResponse> {
-    const userRole = toUserRole(role);
-    if (!userRole) {
-      throw new BadRequestException(
-        'Invalid role. Must be OWNER, OPERATOR, or VIEWER',
-      );
-    }
-
     return await this.userService.create({
-      email,
-      password,
-      name,
-      role: userRole,
+      ...input,
       companyId: currentUser.companyId,
     });
   }
 
-  @Mutation(() => UserResponse, { description: 'Update user information' })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => UserResponse)
+  @OwnerAndOperator()
+  @UsePipes(new ZodValidationPipe(UpdateUserSchema))
   async updateUser(
     @Args('id') id: string,
+    @Args('input') input: UpdateUserInput,
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('email', { nullable: true }) email?: string,
-    @Args('name', { nullable: true }) name?: string,
-    @Args('role', { nullable: true }) role?: string,
-    @Args('password', { nullable: true }) password?: string,
   ): Promise<UserResponse> {
-    const userRole = role ? toUserRole(role) : undefined;
-    if (role && !userRole) {
-      throw new BadRequestException(
-        'Invalid role. Must be OWNER, OPERATOR, or VIEWER',
-      );
-    }
-
-    if (role && currentUser.role !== UserRole.OWNER) {
+    if (
+      (input.role && currentUser.role !== UserRole.OWNER) ||
+      UserRole.OPERATOR
+    ) {
       throw new UnauthorizedException('Only owners can change user roles');
     }
 
-    return await this.userService.update(
-      id,
-      {
-        email,
-        name,
-        role: userRole,
-        password,
-      },
-      currentUser.companyId,
-    );
+    return await this.userService.update(id, input, currentUser.companyId);
   }
 
-  @Mutation(() => Boolean, {
-    description: 'Delete a user (OWNER: hard delete, OPERATOR: soft delete)',
-  })
-  @Roles(UserRole.OWNER, UserRole.OPERATOR)
+  @Mutation(() => Boolean)
+  @OwnerAndOperator()
   async deleteUser(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,

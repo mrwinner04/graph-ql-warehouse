@@ -6,38 +6,50 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Customer entity representing company customers' })
+// Define the CustomerType enum
+export enum CustomerType {
+  CUSTOMER = 'customer',
+  SUPPLIER = 'supplier',
+}
+
+// Register the enum with GraphQL
+registerEnumType(CustomerType, {
+  name: 'CustomerType',
+  description: 'Type of customer - either customer or supplier',
+});
+
+@ObjectType()
 @Entity('customers')
 export class CustomerEntity {
-  @Field(() => ID, { description: 'Unique identifier for the customer' })
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field(() => String, { description: 'Company ID the customer belongs to' })
+  @Field(() => String)
   @Column({ type: 'uuid', name: 'company_id', nullable: false })
   companyId: string;
 
-  @Field(() => String, { description: 'Customer name' })
+  @Field(() => String)
   @Column({ type: 'varchar', nullable: false })
   name: string;
 
   @Field(() => String, {
-    description: 'Customer email address',
     nullable: true,
   })
   @Column({ type: 'varchar', nullable: true })
   email?: string;
 
-  @Field(() => String, {
-    description: 'Customer type (customer/supplier)',
-    nullable: true,
+  @Field(() => CustomerType)
+  @Column({
+    type: 'enum',
+    enum: CustomerType,
+    nullable: false,
   })
-  @Column({ type: 'varchar', nullable: true })
-  type?: string;
+  type: CustomerType;
 
-  @Field(() => Date, { description: 'When the customer was created' })
+  @Field(() => Date)
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamp',
@@ -46,7 +58,7 @@ export class CustomerEntity {
   })
   createdAt: Date;
 
-  @Field(() => Date, { description: 'When the customer was last updated' })
+  @Field(() => Date)
   @UpdateDateColumn({
     name: 'updated_at',
     type: 'timestamp',

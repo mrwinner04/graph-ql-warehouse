@@ -17,7 +17,6 @@ export function transformToResponse<T extends Record<string, any>>(
 ): Partial<T> {
   const transformed = { ...entity };
 
-  // Remove excluded fields
   excludeFields.forEach((field) => {
     delete transformed[field];
   });
