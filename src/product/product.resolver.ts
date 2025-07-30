@@ -12,11 +12,14 @@ import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { ProductEntity } from './product.entity';
 import { ProductService } from './product.service';
-import { ProductResponse } from './dto/product.response';
-import { CreateProductInput } from './dto/create-product.input';
-import { UpdateProductInput } from './dto/update-product.input';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { CreateProductSchema, UpdateProductSchema } from './product.types';
+import {
+  CreateProductSchema,
+  UpdateProductSchema,
+  ProductResponse,
+  CreateProductInput,
+  UpdateProductInput,
+} from './product.types';
 
 @Resolver(() => ProductEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)

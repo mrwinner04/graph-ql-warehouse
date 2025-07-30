@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductEntity, ProductType } from './product.entity';
-import { ProductResponse } from './dto/product.response';
+import { ProductResponse } from './product.types';
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { transformEntity } from '../common/entity-transformers';
 import {

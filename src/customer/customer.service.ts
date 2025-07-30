@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CustomerEntity } from './customer.entity';
-import { CustomerResponse } from './dto/customer.response';
+import { CustomerResponse } from './customer.types';
 import { OrderEntity } from '../order/order.entity';
 import { UserRole } from '../common/types';
 import {

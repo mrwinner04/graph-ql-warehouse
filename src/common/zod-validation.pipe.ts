@@ -9,10 +9,17 @@ export class ZodValidationPipe implements PipeTransform {
     try {
       return this.schema.parse(value);
     } catch (error) {
-      throw new BadRequestException({
-        message: 'Validation failed',
-        errors: error.errors,
-      });
+      if (error.errors) {
+        throw new BadRequestException({
+          message: 'Validation failed',
+          errors: error.errors,
+        });
+      } else {
+        throw new BadRequestException({
+          message: 'Validation failed',
+          error: error.message,
+        });
+      }
     }
   }
 }

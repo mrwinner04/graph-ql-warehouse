@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { InputType, Field } from '@nestjs/graphql';
 
 export const CompanyBaseSchema = z.object({
   name: z
@@ -8,3 +9,11 @@ export const CompanyBaseSchema = z.object({
 });
 
 export const UpdateCompanySchema = CompanyBaseSchema;
+
+// ===== GRAPHQL INPUT TYPES =====
+
+@InputType()
+export class UpdateCompanyInput {
+  @Field(() => String)
+  name: string;
+}

@@ -10,7 +10,7 @@ import { UserEntity } from './user.entity';
 import { CompanyEntity } from '../company/company.entity';
 import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
-import { UserResponse } from './dto/user.response';
+import { UserResponse } from './user.types';
 import {
   transformEntity,
   hashPassword,

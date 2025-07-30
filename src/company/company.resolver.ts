@@ -25,7 +25,7 @@ import { CustomerEntity } from '../customer/customer.entity';
 import { InvoiceEntity } from '../invoice/invoice.entity';
 import { CompanyService } from './company.service';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { UpdateCompanyInput } from './dto/update-company.input';
+import { UpdateCompanyInput } from './company.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { UpdateCompanySchema } from './company.types';
 

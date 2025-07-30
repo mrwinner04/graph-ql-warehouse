@@ -12,9 +12,11 @@ import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { WarehouseEntity } from './warehouse.entity';
 import { WarehouseService } from './warehouse.service';
-import { WarehouseResponse } from './dto/warehouse.response';
-import { CreateWarehouseInput } from './dto/create-warehouse.input';
-import { UpdateWarehouseInput } from './dto/update-warehouse.input';
+import {
+  WarehouseResponse,
+  CreateWarehouseInput,
+  UpdateWarehouseInput,
+} from './warehouse.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   CreateWarehouseSchema,

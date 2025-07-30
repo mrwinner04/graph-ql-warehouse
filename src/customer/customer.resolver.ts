@@ -19,11 +19,14 @@ import { AuthenticatedUser } from '../common/graphql-context';
 import { CustomerEntity } from './customer.entity';
 import { OrderEntity } from '../order/order.entity';
 import { CustomerService } from './customer.service';
-import { CustomerResponse } from './dto/customer.response';
-import { CreateCustomerInput } from './dto/create-customer.input';
-import { UpdateCustomerInput } from './dto/update-customer.input';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { CreateCustomerSchema, UpdateCustomerSchema } from './customer.types';
+import {
+  CreateCustomerSchema,
+  UpdateCustomerSchema,
+  CustomerResponse,
+  CreateCustomerInput,
+  UpdateCustomerInput,
+} from './customer.types';
 
 @Resolver(() => CustomerEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)

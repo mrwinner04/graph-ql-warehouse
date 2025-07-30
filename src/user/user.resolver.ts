@@ -13,11 +13,16 @@ import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { UserEntity } from './user.entity';
 import { UserService } from './user.service';
-import { UserResponse } from './dto/user.response';
-import { CreateUserInput } from './dto/create-user.input';
-import { UpdateUserInput } from './dto/update-user.input';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { CreateUserSchema, UpdateUserSchema } from './user.types';
+import {
+  CreateUserSchema,
+  UpdateUserSchema,
+  AddUserToCompanySchema,
+  UserResponse,
+  CreateUserInput,
+  UpdateUserInput,
+  AddUserToCompanyInput,
+} from './user.types';
 
 @Resolver(() => UserEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -68,6 +73,19 @@ export class UserResolver {
     }
 
     return await this.userService.update(id, input, currentUser.companyId);
+  }
+
+  @Mutation(() => UserResponse)
+  @OwnerOnly()
+  async addUserToCompany(
+    @Args('input', new ZodValidationPipe(AddUserToCompanySchema))
+    input: AddUserToCompanyInput,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<UserResponse> {
+    return await this.userService.create({
+      ...input,
+      companyId: currentUser.companyId,
+    });
   }
 
   @Mutation(() => Boolean)
