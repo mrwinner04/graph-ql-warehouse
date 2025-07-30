@@ -43,11 +43,11 @@ export class OrderEntity {
   })
   type: OrderType;
 
-  @Field(() => String, { description: 'Customer ID for this order' })
+  @Field(() => String, { description: 'Customer ID' })
   @Column({ type: 'uuid', name: 'customer_id', nullable: false })
   customerId: string;
 
-  @Field(() => String, { description: 'Warehouse ID for this order' })
+  @Field(() => String, { description: 'Warehouse ID' })
   @Column({ type: 'uuid', name: 'warehouse_id', nullable: false })
   warehouseId: string;
 
@@ -57,7 +57,7 @@ export class OrderEntity {
     nullable: false,
     default: () => 'CURRENT_TIMESTAMP',
   })
-  date?: Date;
+  date: Date;
 
   @Field(() => Date, { description: 'When the order was created' })
   @CreateDateColumn({
@@ -80,6 +80,10 @@ export class OrderEntity {
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
   deletedAt?: Date;
 
+  @Field(() => String, {
+    description: 'ID of user who last modified the order',
+    nullable: true,
+  })
   @Column({ type: 'uuid', name: 'modified_by', nullable: true })
   modifiedBy?: string;
 }

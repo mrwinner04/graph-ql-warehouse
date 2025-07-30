@@ -6,7 +6,17 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
+
+export enum WarehouseType {
+  SOLID = 'solid',
+  LIQUID = 'liquid',
+}
+
+registerEnumType(WarehouseType, {
+  name: 'WarehouseType',
+  description: 'Warehouse types in the system',
+});
 
 @ObjectType({ description: 'Warehouse entity representing storage addresses' })
 @Entity('warehouses')
@@ -27,12 +37,16 @@ export class WarehouseEntity {
   @Column({ type: 'varchar', nullable: true })
   address?: string;
 
-  @Field(() => String, {
+  @Field(() => WarehouseType, {
     description: 'Warehouse type (solid/liquid)',
     nullable: true,
   })
-  @Column({ type: 'varchar', nullable: true })
-  type?: string;
+  @Column({
+    type: 'enum',
+    enum: WarehouseType,
+    nullable: true,
+  })
+  type?: WarehouseType;
 
   @Field(() => Date, { description: 'When the warehouse was created' })
   @CreateDateColumn({

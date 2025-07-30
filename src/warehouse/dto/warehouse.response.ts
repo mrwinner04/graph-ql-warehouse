@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { WarehouseType } from '../warehouse.entity';
 
 @ObjectType({ description: 'Warehouse response type' })
 export class WarehouseResponse {
@@ -14,11 +15,11 @@ export class WarehouseResponse {
   @Field(() => String, { description: 'Warehouse address', nullable: true })
   address?: string;
 
-  @Field(() => String, {
+  @Field(() => WarehouseType, {
     description: 'Warehouse type (solid/liquid)',
     nullable: true,
   })
-  type?: string;
+  type?: WarehouseType;
 
   @Field(() => Date, {
     description: 'When the warehouse was created',

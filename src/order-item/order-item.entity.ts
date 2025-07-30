@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 
-@ObjectType({ description: 'Order item entity representing items in orders' })
+@ObjectType({ description: 'Order item entity representing items in an order' })
 @Entity('order_items')
 export class OrderItemEntity {
   @Field(() => ID, { description: 'Unique identifier for the order item' })
@@ -24,32 +24,12 @@ export class OrderItemEntity {
   productId: string;
 
   @Field(() => Number, { description: 'Quantity of the product' })
-  @Column({
-    type: 'int',
-    nullable: false,
-    default: 1,
-  })
+  @Column({ type: 'integer', nullable: false })
   quantity: number;
 
-  @Field(() => String, { description: 'Unit price for this item' })
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    nullable: false,
-    default: '0.0',
-  })
-  unitPrice: string;
-
-  @Field(() => String, { description: 'Total price for this item' })
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    nullable: false,
-    default: '0.0',
-  })
-  totalPrice: string;
+  @Field(() => String, { description: 'Price per unit' })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
+  price: string;
 
   @Field(() => Date, { description: 'When the order item was created' })
   @CreateDateColumn({
@@ -71,4 +51,11 @@ export class OrderItemEntity {
 
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
   deletedAt?: Date;
+
+  @Field(() => String, {
+    description: 'ID of user who last modified the order item',
+    nullable: true,
+  })
+  @Column({ type: 'uuid', name: 'modified_by', nullable: true })
+  modifiedBy?: string;
 }

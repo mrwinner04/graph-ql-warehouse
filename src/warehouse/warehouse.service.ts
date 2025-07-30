@@ -14,11 +14,12 @@ import {
   validateFieldNotExistsInCompany,
   deleteEntityByRole,
 } from '../common/common.utils';
+import { WarehouseType } from './warehouse.entity';
 
 interface CreateWarehouseData {
   name: string;
   address?: string;
-  type?: string;
+  type?: WarehouseType;
   companyId: string;
   modifiedBy?: string;
 }
@@ -26,7 +27,7 @@ interface CreateWarehouseData {
 interface UpdateWarehouseData {
   name?: string;
   address?: string;
-  type?: string;
+  type?: WarehouseType;
   modifiedBy?: string;
 }
 
@@ -86,7 +87,7 @@ export class WarehouseService {
     const warehouse = this.warehouseRepository.create({
       name: data.name.trim(),
       address: data.address?.trim(),
-      type: data.type?.trim(),
+      type: data.type,
       companyId: data.companyId,
       modifiedBy: data.modifiedBy,
     });
@@ -120,7 +121,7 @@ export class WarehouseService {
       {
         ...(data.name && { name: data.name.trim() }),
         ...(data.address && { address: data.address.trim() }),
-        ...(data.type && { type: data.type.trim() }),
+        ...(data.type && { type: data.type }),
         ...(data.modifiedBy && { modifiedBy: data.modifiedBy }),
       },
     );

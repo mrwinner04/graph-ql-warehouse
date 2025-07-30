@@ -9,6 +9,8 @@ import { AuthenticatedUser } from '../common/graphql-context';
 import { WarehouseEntity } from './warehouse.entity';
 import { WarehouseService } from './warehouse.service';
 import { WarehouseResponse } from './dto/warehouse.response';
+import { CreateWarehouseInput } from './dto/create-warehouse.input';
+import { UpdateWarehouseInput } from './dto/update-warehouse.input';
 
 @Resolver(() => WarehouseEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,14 +45,10 @@ export class WarehouseResolver {
   @Roles(UserRole.OWNER, UserRole.OPERATOR)
   async createWarehouse(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('name') name: string,
-    @Args('address', { nullable: true }) address?: string,
-    @Args('type', { nullable: true }) type?: string,
+    @Args('input') input: CreateWarehouseInput,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.create({
-      name,
-      address,
-      type,
+      ...input,
       companyId: currentUser.companyId,
       modifiedBy: currentUser.id,
     });
@@ -62,18 +60,14 @@ export class WarehouseResolver {
   })
   @Roles(UserRole.OWNER, UserRole.OPERATOR)
   async updateWarehouse(
-    @CurrentUser() currentUser: AuthenticatedUser,
     @Args('id') id: string,
-    @Args('name', { nullable: true }) name?: string,
-    @Args('address', { nullable: true }) address?: string,
-    @Args('type', { nullable: true }) type?: string,
+    @Args('input') input: UpdateWarehouseInput,
+    @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.update(
       id,
       {
-        name,
-        address,
-        type,
+        ...input,
         modifiedBy: currentUser.id,
       },
       currentUser.companyId,
