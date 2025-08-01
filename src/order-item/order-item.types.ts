@@ -13,12 +13,8 @@ export const OrderItemBaseSchema = z.object({
     .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal number'),
 });
 
-// Create order item schema
-export const CreateOrderItemSchema = OrderItemBaseSchema.extend({
-  companyId: z.uuid('Invalid company ID'),
-});
+export const CreateOrderItemSchema = OrderItemBaseSchema;
 
-// Update order item schema
 export const UpdateOrderItemSchema = OrderItemBaseSchema.partial();
 
 // ===== GRAPHQL INPUT TYPES =====

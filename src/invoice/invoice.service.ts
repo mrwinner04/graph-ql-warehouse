@@ -11,6 +11,7 @@ import {
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { UserRole } from '../common/types';
 import { nanoid } from 'nanoid';
+import { CalculationService } from '../common/calculation.service';
 
 interface CreateInvoiceData {
   orderId: string;
@@ -34,19 +35,8 @@ export class InvoiceService {
   constructor(
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
+    private readonly calculationService: CalculationService,
   ) {}
-
-  private async calculateInvoiceTotal(orderId: string): Promise<number> {
-    const result = await this.invoiceRepository.manager
-      .createQueryBuilder()
-      .select('SUM(oi.quantity * CAST(oi.price AS DECIMAL))', 'total')
-      .from('order_items', 'oi')
-      .where('oi.order_id = :orderId', { orderId })
-      .andWhere('oi.deleted_at IS NULL')
-      .getRawOne();
-
-    return result?.total ? parseFloat(result.total) : 0;
-  }
 
   async findAll(companyId: string): Promise<InvoiceResponse[]> {
     const invoices = await this.invoiceRepository.find({
@@ -56,7 +46,9 @@ export class InvoiceService {
 
     const invoicesWithTotals = await Promise.all(
       invoices.map(async (invoice) => {
-        const total = await this.calculateInvoiceTotal(invoice.orderId);
+        const total = await this.calculationService.calculateOrderTotal(
+          invoice.orderId,
+        );
         const transformed = transformEntity(invoice) as InvoiceResponse;
         return { ...transformed, total };
       }),
@@ -80,7 +72,9 @@ export class InvoiceService {
       'Invoice',
     );
 
-    const total = await this.calculateInvoiceTotal(invoice.orderId);
+    const total = await this.calculationService.calculateOrderTotal(
+      invoice.orderId,
+    );
     const transformed = transformEntity(invoice) as InvoiceResponse;
     return { ...transformed, total };
   }

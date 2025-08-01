@@ -43,10 +43,7 @@ export class OrderItemService {
     private readonly orderService: OrderService,
   ) {}
 
-  // Find all order items for a company
   async findAll(companyId: string): Promise<OrderItemResponse[]> {
-    // Since we removed the @ManyToOne relationships, we need to use a different approach
-    // We'll get all order items and filter by company access in the resolver
     const orderItems = await this.orderItemRepository.find({
       order: { createdAt: 'DESC' },
     });
@@ -56,7 +53,6 @@ export class OrderItemService {
     );
   }
 
-  // Find order item by ID with company access validation
   async findOne(id: string, companyId: string): Promise<OrderItemResponse> {
     const orderItem = await this.orderItemRepository.findOne({
       where: { id },
@@ -66,13 +62,9 @@ export class OrderItemService {
       throw new NotFoundException('Order item not found');
     }
 
-    // Note: Company access validation will be handled at the resolver level
-    // by checking the order's companyId through the field resolver
-
     return transformEntity(orderItem) as OrderItemResponse;
   }
 
-  // Find order item by ID (for internal use)
   async findById(id: string): Promise<OrderItemEntity> {
     const orderItem = await this.orderItemRepository.findOne({
       where: { id },
@@ -85,7 +77,6 @@ export class OrderItemService {
 
   // Create new order item
   async create(data: CreateOrderItemData): Promise<OrderItemResponse> {
-    // Check if this product is already in the order
     const existingOrderItem = await this.orderItemRepository.findOne({
       where: {
         orderId: data.orderId,
@@ -103,7 +94,6 @@ export class OrderItemService {
     const order = await this.orderService.findById(data.orderId);
     const warehouse = await this.warehouseService.findById(order.warehouseId);
 
-    // Validate product-warehouse type compatibility
     if (warehouse.type) {
       validateProductWarehouseCompatibility(product.type, warehouse.type);
     }
@@ -121,16 +111,13 @@ export class OrderItemService {
     return transformEntity(savedOrderItem) as OrderItemResponse;
   }
 
-  // Update order item with company access validation
   async update(
     id: string,
     data: UpdateOrderItemData,
     companyId: string,
   ): Promise<OrderItemResponse> {
-    // Check if order item exists and has access
     await this.findOne(id, companyId);
 
-    // Update order item (removed duplicate product validation for now)
     await this.orderItemRepository.update(
       { id },
       {
@@ -145,7 +132,6 @@ export class OrderItemService {
     return this.findOne(id, companyId);
   }
 
-  // Delete order item with company access validation
   async remove(
     id: string,
     companyId: string,
@@ -160,7 +146,6 @@ export class OrderItemService {
     );
   }
 
-  // Find order items by order ID (for field resolver)
   async findOrderItemsByOrderId(orderId: string): Promise<OrderItemEntity[]> {
     return this.orderItemRepository.find({
       where: { orderId },
@@ -168,7 +153,6 @@ export class OrderItemService {
     });
   }
 
-  // Find order items by product ID (for field resolver)
   async findOrderItemsByProductId(
     productId: string,
   ): Promise<OrderItemEntity[]> {

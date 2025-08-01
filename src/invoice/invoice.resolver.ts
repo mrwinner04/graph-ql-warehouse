@@ -26,6 +26,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CreateInvoiceSchema, UpdateInvoiceSchema } from './invoice.types';
+import { CalculationService } from '../common/calculation.service';
 
 @Resolver(() => InvoiceEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,6 +36,7 @@ export class InvoiceResolver {
     private readonly orderService: OrderService,
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
+    private readonly calculationService: CalculationService,
   ) {}
 
   @Query(() => [InvoiceEntity])
@@ -69,10 +71,10 @@ export class InvoiceResolver {
 
   @Mutation(() => InvoiceResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(CreateInvoiceSchema))
   async createInvoice(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('input') input: CreateInvoiceInput,
+    @Args('input', new ZodValidationPipe(CreateInvoiceSchema))
+    input: CreateInvoiceInput,
   ): Promise<InvoiceResponse> {
     return await this.invoiceService.create({
       ...input,
@@ -83,11 +85,11 @@ export class InvoiceResolver {
 
   @Mutation(() => InvoiceResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(UpdateInvoiceSchema))
   async updateInvoice(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('id') id: string,
-    @Args('input') input: UpdateInvoiceInput,
+    @Args('input', new ZodValidationPipe(UpdateInvoiceSchema))
+    input: UpdateInvoiceInput,
   ): Promise<InvoiceResponse> {
     return await this.invoiceService.update(
       id,
@@ -120,14 +122,6 @@ export class InvoiceResolver {
 
   @ResolveField(() => Number, { nullable: true })
   async total(@Parent() invoice: InvoiceEntity): Promise<number> {
-    const result = await this.invoiceRepository.manager
-      .createQueryBuilder()
-      .select('SUM(oi.quantity * CAST(oi.price AS DECIMAL))', 'total')
-      .from('order_items', 'oi')
-      .where('oi.order_id = :orderId', { orderId: invoice.orderId })
-      .andWhere('oi.deleted_at IS NULL')
-      .getRawOne();
-
-    return result?.total ? parseFloat(result.total) : 0;
+    return await this.calculationService.calculateOrderTotal(invoice.orderId);
   }
 }

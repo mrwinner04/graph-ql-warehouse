@@ -3,9 +3,11 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
+import { InvoiceEntity } from './invoice/invoice.entity';
 import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
 import { RolesGuard } from './auth/guard/roles.guard';
 import { CompanyAccessInterceptor } from './common/company-access.interceptor';
+import { CalculationService } from './common/calculation.service';
 import { AuthModule } from './auth/auth.module';
 import { CompanyModule } from './company/company.module';
 import { UserModule } from './user/user.module';
@@ -40,6 +42,7 @@ import { GraphQLError } from './common/graphql-context';
     }),
 
     TypeOrmModule.forRoot(dbConfig),
+    TypeOrmModule.forFeature([InvoiceEntity]),
 
     AuthModule,
     CompanyModule,
@@ -62,6 +65,7 @@ import { GraphQLError } from './common/graphql-context';
       useClass: RolesGuard,
     },
     CompanyAccessInterceptor,
+    CalculationService,
   ],
 })
 export class AppModule {}

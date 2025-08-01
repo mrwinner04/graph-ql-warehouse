@@ -18,7 +18,6 @@ import { CurrentUser } from '../decorator/current-user.decorator';
 
 import { AuthenticatedUser } from '../common/graphql-context';
 
-// Import related entities for field resolvers
 import { OrderEntity } from '../order/order.entity';
 import { ProductEntity } from '../product/product.entity';
 import { OrderService } from '../order/order.service';
@@ -89,10 +88,10 @@ export class OrderItemResolver {
 
   @Mutation(() => OrderItemEntity)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(CreateOrderItemSchema))
   async createOrderItem(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('input') input: CreateOrderItemInput,
+    @Args('input', new ZodValidationPipe(CreateOrderItemSchema))
+    input: CreateOrderItemInput,
   ): Promise<OrderItemEntity> {
     const order = await this.orderService.findById(input.orderId);
 
@@ -109,10 +108,10 @@ export class OrderItemResolver {
 
   @Mutation(() => OrderItemEntity)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(UpdateOrderItemSchema))
   async updateOrderItem(
     @Args('id') id: string,
-    @Args('input') input: UpdateOrderItemInput,
+    @Args('input', new ZodValidationPipe(UpdateOrderItemSchema))
+    input: UpdateOrderItemInput,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<OrderItemEntity> {
     const orderItemResponse = await this.orderItemService.update(
