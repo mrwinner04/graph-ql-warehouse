@@ -15,7 +15,7 @@ import { InvoiceModule } from '../invoice/invoice.module';
     TypeOrmModule.forFeature([OrderEntity]),
     CustomerModule,
     WarehouseModule,
-    ProductModule,
+    forwardRef(() => ProductModule),
     forwardRef(() => OrderItemModule),
     forwardRef(() => InvoiceModule),
   ],

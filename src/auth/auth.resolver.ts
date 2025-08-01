@@ -2,12 +2,18 @@ import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UsePipes } from '@nestjs/common';
 import { Public } from '../decorator/public.decorator';
 import { AuthService } from './auth.service';
-import { LoginInput } from './dto/login.input';
-import { RegisterInput } from './dto/register.input';
-import { LoginResponse } from './dto/login.response';
-import { RegisterResponse } from './dto/register.response';
+import {
+  LoginInput,
+  RegisterInput,
+  ChangePasswordInput,
+  LoginResponse,
+  RegisterResponse,
+  ChangePasswordResponse,
+} from './auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { LoginSchema, RegisterSchema } from '../user/user.types';
+import { LoginSchema, RegisterSchema } from './auth.types';
+import { CurrentUser } from '../decorator/current-user.decorator';
+import { AuthenticatedUser } from '../common/graphql-context';
 
 @Resolver()
 export class AuthResolver {
@@ -27,5 +33,13 @@ export class AuthResolver {
     @Args('input') input: RegisterInput,
   ): Promise<RegisterResponse> {
     return this.authService.register(input);
+  }
+
+  @Mutation(() => ChangePasswordResponse)
+  async changePassword(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Args('input') input: ChangePasswordInput,
+  ): Promise<ChangePasswordResponse> {
+    return this.authService.changePassword(currentUser.id, input);
   }
 }

@@ -1,17 +1,21 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards, UsePipes } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
 import {
-  Roles,
-  OwnerAndOperator,
-  AllRoles,
-} from '../decorator/roles.decorator';
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
+import { UseGuards, UsePipes } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
-import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { ProductEntity } from './product.entity';
 import { ProductService } from './product.service';
+import { OrderItemService } from '../order-item/order-item.service';
+import { OrderItemEntity } from '../order-item/order-item.entity';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   CreateProductSchema,
@@ -19,12 +23,18 @@ import {
   ProductResponse,
   CreateProductInput,
   UpdateProductInput,
+  BestSellingProductsReport,
+  BestSellingProductsInput,
+  BestSellingProductsSchema,
 } from './product.types';
 
 @Resolver(() => ProductEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductResolver {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly orderItemService: OrderItemService,
+  ) {}
 
   // Query to get all products in the company
   @Query(() => [ProductResponse])
@@ -48,10 +58,10 @@ export class ProductResolver {
   // Mutation to create a new product
   @Mutation(() => ProductResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(CreateProductSchema))
   async createProduct(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('input') input: CreateProductInput,
+    @Args('input', new ZodValidationPipe(CreateProductSchema))
+    input: CreateProductInput,
   ): Promise<ProductResponse> {
     return await this.productService.create({
       ...input,
@@ -63,10 +73,10 @@ export class ProductResolver {
   // Mutation to update product
   @Mutation(() => ProductResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(UpdateProductSchema))
   async updateProduct(
     @Args('id') id: string,
-    @Args('input') input: UpdateProductInput,
+    @Args('input', new ZodValidationPipe(UpdateProductSchema))
+    input: UpdateProductInput,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<ProductResponse> {
     return await this.productService.update(
@@ -92,5 +102,28 @@ export class ProductResolver {
       currentUser.role,
     );
     return true;
+  }
+
+  // Query to get best selling products report
+  @Query(() => BestSellingProductsReport, {
+    description: 'Get best selling products report',
+  })
+  @AllRoles()
+  async bestSellingProducts(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Args('input', new ZodValidationPipe(BestSellingProductsSchema))
+    input: BestSellingProductsInput,
+  ): Promise<BestSellingProductsReport> {
+    return await this.productService.getBestSellingProducts(
+      currentUser.companyId,
+      input,
+    );
+  }
+
+  @ResolveField(() => [OrderItemEntity])
+  async orderItems(
+    @Parent() product: ProductEntity,
+  ): Promise<OrderItemEntity[]> {
+    return await this.orderItemService.findOrderItemsByProductId(product.id);
   }
 }

@@ -1,14 +1,9 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards, UsePipes } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import {
-  Roles,
-  OwnerAndOperator,
-  AllRoles,
-} from '../decorator/roles.decorator';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
-import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
 import { WarehouseEntity } from './warehouse.entity';
 import { WarehouseService } from './warehouse.service';
@@ -16,6 +11,8 @@ import {
   WarehouseResponse,
   CreateWarehouseInput,
   UpdateWarehouseInput,
+  ProductWithHighestStock,
+  AvailableStockReport,
 } from './warehouse.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
@@ -47,10 +44,10 @@ export class WarehouseResolver {
 
   @Mutation(() => WarehouseResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(CreateWarehouseSchema))
   async createWarehouse(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('input') input: CreateWarehouseInput,
+    @Args('input', new ZodValidationPipe(CreateWarehouseSchema))
+    input: CreateWarehouseInput,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.create({
       ...input,
@@ -61,10 +58,10 @@ export class WarehouseResolver {
 
   @Mutation(() => WarehouseResponse)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(UpdateWarehouseSchema))
   async updateWarehouse(
     @Args('id') id: string,
-    @Args('input') input: UpdateWarehouseInput,
+    @Args('input', new ZodValidationPipe(UpdateWarehouseSchema))
+    input: UpdateWarehouseInput,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<WarehouseResponse> {
     return await this.warehouseService.update(
@@ -89,5 +86,33 @@ export class WarehouseResolver {
       currentUser.role,
     );
     return true;
+  }
+
+  // Query to get product with highest stock per warehouse
+  @Query(() => [ProductWithHighestStock], {
+    description: 'Get product with highest stock per warehouse',
+  })
+  @AllRoles()
+  async productWithHighestStockPerWarehouse(
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<ProductWithHighestStock[]> {
+    return await this.warehouseService.getProductWithHighestStockPerWarehouse(
+      currentUser.companyId,
+    );
+  }
+
+  // Query to get available stock per warehouse
+  @Query(() => [AvailableStockReport], {
+    description: 'Get available stock per warehouse',
+  })
+  @AllRoles()
+  async availableStock(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Args('warehouseId', { nullable: true }) warehouseId?: string,
+  ): Promise<AvailableStockReport[]> {
+    return await this.warehouseService.getAvailableStock(
+      currentUser.companyId,
+      warehouseId,
+    );
   }
 }

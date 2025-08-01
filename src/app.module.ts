@@ -3,8 +3,8 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
-import { RolesGuard } from './auth/roles.guard';
+import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
+import { RolesGuard } from './auth/guard/roles.guard';
 import { CompanyAccessInterceptor } from './common/company-access.interceptor';
 import { AuthModule } from './auth/auth.module';
 import { CompanyModule } from './company/company.module';
@@ -15,7 +15,6 @@ import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
 import { OrderItemModule } from './order-item/order-item.module';
 import { InvoiceModule } from './invoice/invoice.module';
-import { DevModule } from './dev/dev.module';
 import { dbConfig } from './db.config';
 import { GraphQLError } from './common/graphql-context';
 
@@ -51,7 +50,6 @@ import { GraphQLError } from './common/graphql-context';
     OrderModule,
     OrderItemModule,
     InvoiceModule,
-    DevModule,
   ],
 
   providers: [

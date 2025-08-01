@@ -7,16 +7,14 @@ import {
   Parent,
 } from '@nestjs/graphql';
 import { UseGuards, UsePipes, UnauthorizedException } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
 import {
-  Roles,
   OwnerOnly,
   OwnerAndOperator,
   AllRoles,
 } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
-import { UserRole } from '../common/types';
 import { CompanyEntity } from './company.entity';
 import { UserEntity } from '../user/user.entity';
 import { ProductEntity } from '../product/product.entity';
@@ -36,8 +34,10 @@ export class CompanyResolver {
 
   @Query(() => [CompanyEntity])
   @OwnerOnly()
-  async companies(): Promise<CompanyEntity[]> {
-    return await this.companyService.findAll();
+  async companies(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CompanyEntity[]> {
+    return await this.companyService.findByCompanyId(user.companyId);
   }
 
   @Query(() => CompanyEntity)
@@ -46,7 +46,7 @@ export class CompanyResolver {
     @Args('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CompanyEntity> {
-    if (user.companyId !== id && user.role !== UserRole.OWNER) {
+    if (user.companyId !== id) {
       throw new UnauthorizedException('Access denied');
     }
     return await this.companyService.findById(id);
@@ -60,7 +60,7 @@ export class CompanyResolver {
     @Args('input') input: UpdateCompanyInput,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<CompanyEntity> {
-    if (user.companyId !== id && user.role !== UserRole.OWNER) {
+    if (user.companyId !== id) {
       throw new UnauthorizedException('Access denied');
     }
     return await this.companyService.update(id, input);

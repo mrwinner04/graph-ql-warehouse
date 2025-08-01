@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { InputType, Field, ObjectType, ID } from '@nestjs/graphql';
+import { InputType, Field, ObjectType, ID, Int, Float } from '@nestjs/graphql';
 import { WarehouseType } from './warehouse.entity';
 
 // ===== ZOD VALIDATION SCHEMAS =====
@@ -10,12 +10,10 @@ export const WarehouseBaseSchema = z.object({
     .min(1, 'Warehouse name is required')
     .max(100, 'Warehouse name too long'),
   address: z.string().max(200, 'Address too long').optional(),
-  type: z.enum(['solid', 'liquid']).optional(),
+  type: z.enum(['SOLID', 'LIQUID', 'solid', 'liquid']).optional(),
 });
 
-export const CreateWarehouseSchema = WarehouseBaseSchema.extend({
-  companyId: z.uuid('Invalid company ID'),
-});
+export const CreateWarehouseSchema = WarehouseBaseSchema;
 
 export const UpdateWarehouseSchema = WarehouseBaseSchema.partial();
 
@@ -90,4 +88,67 @@ export class WarehouseResponse {
     nullable: true,
   })
   modifiedBy?: string;
+}
+
+// ===== REPORT TYPES =====
+
+export const ProductWithHighestStockSchema = z.object({});
+
+export const AvailableStockSchema = z.object({
+  warehouseId: z.uuid('Invalid warehouse ID').optional(),
+});
+
+@ObjectType()
+export class ProductWithHighestStock {
+  @Field(() => String)
+  warehouseId: string;
+
+  @Field(() => String)
+  warehouseName: string;
+
+  @Field(() => String)
+  productId: string;
+
+  @Field(() => String)
+  productName: string;
+
+  @Field(() => Int)
+  totalStock: number;
+}
+
+// GraphQL types for available stock per warehouse
+@ObjectType()
+export class AvailableStockItem {
+  @Field(() => String)
+  productId: string;
+
+  @Field(() => String)
+  productName: string;
+
+  @Field(() => String)
+  productCode: string;
+
+  @Field(() => Int)
+  availableQuantity: number;
+
+  @Field(() => Float)
+  averagePrice: number;
+}
+
+@ObjectType()
+export class AvailableStockReport {
+  @Field(() => String)
+  warehouseId: string;
+
+  @Field(() => String)
+  warehouseName: string;
+
+  @Field(() => [AvailableStockItem])
+  products: AvailableStockItem[];
+
+  @Field(() => Int)
+  totalProducts: number;
+
+  @Field(() => Float)
+  totalValue: number;
 }

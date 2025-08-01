@@ -1,12 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InvoiceEntity, InvoiceStatus } from './invoice.entity';
-import { InvoiceResponse } from './dto/invoice.response';
+import { InvoiceResponse } from './invoice.types';
 import { transformEntity } from '../common/entity-transformers';
 import {
   validateFieldNotExistsInCompany,
@@ -40,18 +36,35 @@ export class InvoiceService {
     private readonly invoiceRepository: Repository<InvoiceEntity>,
   ) {}
 
-  // Find all invoices for a company
+  private async calculateInvoiceTotal(orderId: string): Promise<number> {
+    const result = await this.invoiceRepository.manager
+      .createQueryBuilder()
+      .select('SUM(oi.quantity * CAST(oi.price AS DECIMAL))', 'total')
+      .from('order_items', 'oi')
+      .where('oi.order_id = :orderId', { orderId })
+      .andWhere('oi.deleted_at IS NULL')
+      .getRawOne();
+
+    return result?.total ? parseFloat(result.total) : 0;
+  }
+
   async findAll(companyId: string): Promise<InvoiceResponse[]> {
     const invoices = await this.invoiceRepository.find({
       where: { companyId },
       order: { createdAt: 'DESC' },
     });
-    return invoices.map(
-      (invoice) => transformEntity(invoice) as InvoiceResponse,
+
+    const invoicesWithTotals = await Promise.all(
+      invoices.map(async (invoice) => {
+        const total = await this.calculateInvoiceTotal(invoice.orderId);
+        const transformed = transformEntity(invoice) as InvoiceResponse;
+        return { ...transformed, total };
+      }),
     );
+
+    return invoicesWithTotals;
   }
 
-  // Find invoice by ID with company access validation
   async findOne(id: string, companyId: string): Promise<InvoiceResponse> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
@@ -61,17 +74,17 @@ export class InvoiceService {
       throw new NotFoundException('Invoice not found');
     }
 
-    // Validate company access
     await validateCompanyAccess(
       () => Promise.resolve(invoice),
       companyId,
       'Invoice',
     );
 
-    return transformEntity(invoice) as InvoiceResponse;
+    const total = await this.calculateInvoiceTotal(invoice.orderId);
+    const transformed = transformEntity(invoice) as InvoiceResponse;
+    return { ...transformed, total };
   }
 
-  // Find invoice by ID (for internal use)
   async findById(id: string): Promise<InvoiceEntity> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
@@ -82,9 +95,7 @@ export class InvoiceService {
     return invoice;
   }
 
-  // Create new invoice
   async create(data: CreateInvoiceData): Promise<InvoiceResponse> {
-    // Generate unique invoice number if not provided
     let invoiceNumber = data.number;
     if (!invoiceNumber) {
       let tries = 0;
@@ -97,7 +108,6 @@ export class InvoiceService {
         tries++;
       }
     } else {
-      // Validate invoice number uniqueness within company
       await validateFieldNotExistsInCompany(
         this.invoiceRepository,
         'number',
@@ -109,17 +119,14 @@ export class InvoiceService {
       );
     }
 
-    // Set default date if not provided
     if (!data.date) {
       data.date = new Date();
     }
 
-    // Set default status if not provided
     if (!data.status) {
       data.status = InvoiceStatus.PENDING;
     }
 
-    // Create invoice
     const invoice = this.invoiceRepository.create({
       orderId: data.orderId,
       number: invoiceNumber,
@@ -152,7 +159,6 @@ export class InvoiceService {
       );
     }
 
-    // Update invoice
     await this.invoiceRepository.update(
       { id },
       {
@@ -167,7 +173,6 @@ export class InvoiceService {
     return this.findOne(id, companyId);
   }
 
-  // Delete invoice with company access validation
   async remove(
     id: string,
     companyId: string,
@@ -182,7 +187,6 @@ export class InvoiceService {
     );
   }
 
-  // Find invoices by order ID (for field resolver)
   async findInvoicesByOrderId(orderId: string): Promise<InvoiceEntity[]> {
     return this.invoiceRepository.find({
       where: { orderId },
@@ -190,7 +194,6 @@ export class InvoiceService {
     });
   }
 
-  // Create invoice automatically for an order
   async createForOrder(
     orderId: string,
     companyId: string,

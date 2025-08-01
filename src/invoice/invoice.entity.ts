@@ -6,13 +6,16 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
+import {
+  ObjectType,
+  Field,
+  ID,
+  registerEnumType,
+  Float,
+} from '@nestjs/graphql';
 
 export enum InvoiceStatus {
   PENDING = 'pending',
-  PAID = 'paid',
-  CANCELLED = 'cancelled',
-  OVERDUE = 'overdue',
 }
 
 registerEnumType(InvoiceStatus, {
@@ -81,4 +84,10 @@ export class InvoiceEntity {
   })
   @Column({ type: 'uuid', name: 'modified_by', nullable: true })
   modifiedBy?: string;
+
+  @Field(() => Float, {
+    description: 'Total amount of the invoice',
+    nullable: true,
+  })
+  total?: number;
 }

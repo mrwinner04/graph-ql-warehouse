@@ -8,13 +8,11 @@ import {
 } from 'typeorm';
 import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
 
-// Define the CustomerType enum
 export enum CustomerType {
   CUSTOMER = 'customer',
   SUPPLIER = 'supplier',
 }
 
-// Register the enum with GraphQL
 registerEnumType(CustomerType, {
   name: 'CustomerType',
   description: 'Type of customer - either customer or supplier',

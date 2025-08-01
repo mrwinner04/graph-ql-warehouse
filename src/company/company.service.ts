@@ -60,8 +60,9 @@ export class CompanyService {
     });
   }
 
-  async findAll(): Promise<CompanyEntity[]> {
+  async findByCompanyId(companyId: string): Promise<CompanyEntity[]> {
     return this.companyRepository.find({
+      where: { id: companyId },
       order: { createdAt: 'DESC' },
     });
   }

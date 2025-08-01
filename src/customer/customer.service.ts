@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CustomerEntity } from './customer.entity';
-import { CustomerResponse } from './customer.types';
+import { CustomerResponse, ClientWithMostOrders } from './customer.types';
 import { OrderEntity } from '../order/order.entity';
 import { UserRole } from '../common/types';
 import {
@@ -83,7 +83,6 @@ export class CustomerService {
       );
     }
 
-    // Create customer
     const customer = this.customerRepository.create({
       name: data.name.trim(),
       email: data.email?.toLowerCase().trim(),
@@ -96,16 +95,13 @@ export class CustomerService {
     return transformEntity(savedCustomer) as CustomerResponse;
   }
 
-  // Update customer with company access validation
   async update(
     id: string,
     data: UpdateCustomerData,
     companyId: string,
   ): Promise<CustomerResponse> {
-    // Check if customer exists and has access
     await this.findOne(id, companyId);
 
-    // Check if email is being changed and if it already exists
     if (data.email) {
       await validateFieldNotExistsInCompany(
         this.customerRepository,
@@ -118,7 +114,6 @@ export class CustomerService {
       );
     }
 
-    // Update customer
     await this.customerRepository.update(
       { id, companyId },
       {
@@ -151,5 +146,29 @@ export class CustomerService {
       where: { customerId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async getClientWithMostOrders(
+    companyId: string,
+  ): Promise<ClientWithMostOrders | undefined> {
+    return this.customerRepository.manager
+      .createQueryBuilder()
+      .select('customer.id', 'customerId')
+      .addSelect('customer.name', 'customerName')
+      .addSelect('COUNT(order.id)', 'orderCount')
+      .from('customers', 'customer')
+      .innerJoin(
+        'orders',
+        'order',
+        'order.customer_id = customer.id AND order.deleted_at IS NULL',
+      )
+      .where('customer.company_id = :companyId', { companyId })
+      .andWhere('customer.deleted_at IS NULL')
+      .andWhere('order.company_id = :companyId', { companyId })
+      .groupBy('customer.id')
+      .addGroupBy('customer.name')
+      .orderBy('"orderCount"', 'DESC')
+      .limit(1)
+      .getRawOne<ClientWithMostOrders>();
   }
 }

@@ -9,18 +9,11 @@ import {
 import { UseGuards, UsePipes } from '@nestjs/common';
 
 import { OrderItemEntity } from './order-item.entity';
-import { OrderItemResponse } from './dto/order-item.response';
-import { CreateOrderItemInput } from './dto/create-order-item.input';
-import { UpdateOrderItemInput } from './dto/update-order-item.input';
+import { CreateOrderItemInput, UpdateOrderItemInput } from './order-item.types';
 import { OrderItemService } from './order-item.service';
-import { UserRole } from '../common/types';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import {
-  Roles,
-  OwnerAndOperator,
-  AllRoles,
-} from '../decorator/roles.decorator';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 
 import { AuthenticatedUser } from '../common/graphql-context';

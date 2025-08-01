@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { OrderItemEntity } from './order-item.entity';
-import { OrderItemResponse } from './dto/order-item.response';
+import { OrderItemResponse } from './order-item.types';
 import { UserRole } from '../common/types';
 import { transformEntity } from '../common/entity-transformers';
 import { deleteEntityByRole } from '../common/common.utils';

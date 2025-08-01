@@ -9,20 +9,17 @@ import {
 import { UseGuards, UsePipes } from '@nestjs/common';
 
 import { OrderEntity } from './order.entity';
-import { OrderResponse } from './dto/order.response';
-import { CreateOrderInput } from './dto/create-order.input';
-import { UpdateOrderInput } from './dto/update-order.input';
+import {
+  CreateOrderInput,
+  UpdateOrderInput,
+  TransferOrderInput,
+} from './order.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CreateOrderSchema, UpdateOrderSchema } from './order.types';
 import { OrderService } from './order.service';
-import { UserRole } from '../common/types';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import {
-  Roles,
-  OwnerAndOperator,
-  AllRoles,
-} from '../decorator/roles.decorator';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 
 import { AuthenticatedUser } from '../common/graphql-context';
@@ -78,10 +75,10 @@ export class OrderResolver {
 
   @Mutation(() => OrderEntity)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(CreateOrderSchema))
   async createOrder(
     @CurrentUser() currentUser: AuthenticatedUser,
-    @Args('input') input: CreateOrderInput,
+    @Args('input', new ZodValidationPipe(CreateOrderSchema))
+    input: CreateOrderInput,
   ): Promise<OrderEntity> {
     const orderResponse = await this.orderService.create({
       ...input,
@@ -89,7 +86,6 @@ export class OrderResolver {
       companyId: currentUser.companyId,
     });
 
-    // Convert OrderResponse back to OrderEntity for field resolvers
     const order = new OrderEntity();
     Object.assign(order, orderResponse);
     return order;
@@ -97,10 +93,10 @@ export class OrderResolver {
 
   @Mutation(() => OrderEntity)
   @OwnerAndOperator()
-  @UsePipes(new ZodValidationPipe(UpdateOrderSchema))
   async updateOrder(
     @Args('id') id: string,
-    @Args('input') input: UpdateOrderInput,
+    @Args('input', new ZodValidationPipe(UpdateOrderSchema))
+    input: UpdateOrderInput,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<OrderEntity> {
     const orderResponse = await this.orderService.update(
@@ -112,7 +108,6 @@ export class OrderResolver {
       currentUser.companyId,
     );
 
-    // Convert OrderResponse back to OrderEntity for field resolvers
     const order = new OrderEntity();
     Object.assign(order, orderResponse);
     return order;
@@ -128,25 +123,38 @@ export class OrderResolver {
     return true;
   }
 
-  // Field Resolver: Resolve customer for an order
+  @Mutation(() => OrderEntity)
+  @OwnerAndOperator()
+  async createTransferOrder(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Args('input') input: TransferOrderInput,
+  ): Promise<OrderEntity> {
+    const orderResponse = await this.orderService.createTransferOrder({
+      ...input,
+      modifiedBy: currentUser.id,
+      companyId: currentUser.companyId,
+    });
+
+    const order = new OrderEntity();
+    Object.assign(order, orderResponse);
+    return order;
+  }
+
   @ResolveField(() => CustomerEntity)
   async customer(@Parent() order: OrderEntity): Promise<CustomerEntity> {
     return this.customerService.findById(order.customerId);
   }
 
-  // Field Resolver: Resolve warehouse for an order
   @ResolveField(() => WarehouseEntity)
   async warehouse(@Parent() order: OrderEntity): Promise<WarehouseEntity> {
     return this.warehouseService.findById(order.warehouseId);
   }
 
-  // Field Resolver: Resolve order items for an order
   @ResolveField(() => [OrderItemEntity])
   async orderItems(@Parent() order: OrderEntity): Promise<OrderItemEntity[]> {
     return this.orderItemService.findOrderItemsByOrderId(order.id);
   }
 
-  // Field Resolver: Resolve invoices for an order
   @ResolveField(() => [InvoiceEntity])
   async invoices(@Parent() order: OrderEntity): Promise<InvoiceEntity[]> {
     return this.invoiceService.findInvoicesByOrderId(order.id);

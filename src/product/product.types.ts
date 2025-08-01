@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { InputType, Field, ObjectType, ID } from '@nestjs/graphql';
+import { InputType, Field, ObjectType, ID, Int, Float } from '@nestjs/graphql';
 import { ProductType } from './product.entity';
 
 // ===== ZOD VALIDATION SCHEMAS =====
@@ -17,13 +17,11 @@ export const ProductBaseSchema = z.object({
   price: z
     .string()
     .regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid decimal number'),
-  type: z.enum(['solid', 'liquid']),
+  type: z.enum(['SOLID', 'LIQUID', 'solid', 'liquid']),
 });
 
 // Create product schema
-export const CreateProductSchema = ProductBaseSchema.extend({
-  companyId: z.uuid('Invalid company ID'),
-});
+export const CreateProductSchema = ProductBaseSchema;
 
 // Update product schema
 export const UpdateProductSchema = ProductBaseSchema.partial();
@@ -105,4 +103,57 @@ export class ProductResponse {
     nullable: true,
   })
   modifiedBy?: string;
+}
+
+// ===== REPORT TYPES =====
+
+export const BestSellingProductsSchema = z.object({
+  limit: z.number().min(1).max(100).optional().default(10),
+});
+
+@InputType({ description: 'Input for best selling products report' })
+export class BestSellingProductsInput {
+  @Field(() => Int, {
+    description: 'Number of results to return',
+    nullable: true,
+  })
+  limit?: number;
+}
+
+@ObjectType({ description: 'Best selling product report item' })
+export class BestSellingProductItem {
+  @Field(() => String, { description: 'Product ID' })
+  productId: string;
+
+  @Field(() => String, { description: 'Product name' })
+  productName: string;
+
+  @Field(() => String, { description: 'Product code', nullable: true })
+  productCode?: string;
+
+  @Field(() => Int, { description: 'Total quantity sold' })
+  totalQuantity: number;
+
+  @Field(() => Float, { description: 'Total revenue generated' })
+  totalRevenue: number;
+
+  @Field(() => Float, { description: 'Average price per unit' })
+  averagePrice: number;
+
+  @Field(() => Int, { description: 'Number of orders containing this product' })
+  orderCount: number;
+}
+
+@ObjectType({ description: 'Best selling products report' })
+export class BestSellingProductsReport {
+  @Field(() => [BestSellingProductItem], {
+    description: 'List of best selling products',
+  })
+  products: BestSellingProductItem[];
+
+  @Field(() => Int, { description: 'Total number of products in report' })
+  totalProducts: number;
+
+  @Field(() => Float, { description: 'Total revenue across all products' })
+  totalRevenue: number;
 }

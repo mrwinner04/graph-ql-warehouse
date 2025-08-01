@@ -8,10 +8,14 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { LoginInput } from './dto/login.input';
-import { RegisterInput } from './dto/register.input';
-import { LoginResponse } from './dto/login.response';
-import { RegisterResponse } from './dto/register.response';
+import {
+  LoginInput,
+  RegisterInput,
+  ChangePasswordInput,
+  LoginResponse,
+  RegisterResponse,
+  ChangePasswordResponse,
+} from './auth.types';
 import { UserRole } from '../common/types';
 import { UserEntity } from '../user/user.entity';
 import { CompanyEntity } from '../company/company.entity';
@@ -93,6 +97,40 @@ export class AuthService {
 
     return {
       user: savedUser,
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    input: ChangePasswordInput,
+  ): Promise<ChangePasswordResponse> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentPasswordValid = await comparePassword(
+      input.currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const hashedNewPassword = await hashPassword(input.newPassword);
+
+    await this.userRepository.update(
+      { id: userId },
+      { password: hashedNewPassword },
+    );
+
+    return {
+      success: true,
+      message: 'Password changed successfully',
     };
   }
 }

@@ -6,7 +6,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductEntity, ProductType } from './product.entity';
-import { ProductResponse } from './product.types';
+import {
+  ProductResponse,
+  BestSellingProductsReport,
+  BestSellingProductItem,
+  BestSellingProductsInput,
+} from './product.types';
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { transformEntity } from '../common/entity-transformers';
 import {
@@ -176,5 +181,63 @@ export class ProductService {
       userRole,
       'Product',
     );
+  }
+
+  // Get best selling products report
+  async getBestSellingProducts(
+    companyId: string,
+    input: BestSellingProductsInput,
+  ): Promise<BestSellingProductsReport> {
+    const { limit = 10 } = input;
+
+    const queryBuilder = this.productRepository
+      .createQueryBuilder('product')
+      .innerJoin('order_items', 'oi', 'product.id = oi.product_id')
+      .innerJoin('orders', 'o', 'oi.order_id = o.id')
+      .where('o.company_id = :companyId', { companyId })
+      .andWhere('o.deleted_at IS NULL')
+      .andWhere('oi.deleted_at IS NULL')
+      .andWhere('product.deleted_at IS NULL')
+      .select('product.id', 'productId')
+      .addSelect('product.name', 'productName')
+      .addSelect('product.code', 'productCode')
+      .addSelect('SUM(oi.quantity)', 'totalQuantity')
+      .addSelect('SUM(oi.quantity * CAST(oi.price AS DECIMAL))', 'totalRevenue')
+      .addSelect('AVG(CAST(oi.price AS DECIMAL))', 'averagePrice')
+      .addSelect('COUNT(DISTINCT o.id)', 'orderCount')
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('product.code')
+      .orderBy('"totalQuantity"', 'DESC')
+      .limit(limit);
+
+    // Filter for sales orders only
+    queryBuilder.andWhere('o.type = :orderType', { orderType: 'sales' });
+
+    const results = await queryBuilder.getRawMany();
+
+    // Transform results to match our GraphQL types
+    const products: BestSellingProductItem[] = results.map((result) => ({
+      productId: result.productId,
+      productName: result.productName,
+      productCode: result.productCode,
+      totalQuantity: parseInt(result.totalQuantity),
+      totalRevenue: parseFloat(result.totalRevenue),
+      averagePrice: parseFloat(result.averagePrice),
+      orderCount: parseInt(result.orderCount),
+    }));
+
+    // Calculate totals
+    const totalProducts = products.length;
+    const totalRevenue = products.reduce(
+      (sum, product) => sum + product.totalRevenue,
+      0,
+    );
+
+    return {
+      products,
+      totalProducts,
+      totalRevenue,
+    };
   }
 }

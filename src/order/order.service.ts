@@ -7,9 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { OrderEntity, OrderType } from './order.entity';
-import { OrderResponse } from './dto/order.response';
-import { CreateOrderInput } from './dto/create-order.input';
-import { UpdateOrderInput } from './dto/update-order.input';
+import { OrderResponse, TransferOrderInput } from './order.types';
 import { UserRole } from '../common/types';
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { transformEntity } from '../common/entity-transformers';
@@ -17,7 +15,6 @@ import {
   validateFieldNotExistsInCompany,
   deleteEntityByRole,
 } from '../common/common.utils';
-import { validateProductWarehouseCompatibility } from '../common/type-validation.utils';
 import { ProductService } from '../product/product.service';
 import { WarehouseService } from '../warehouse/warehouse.service';
 import { InvoiceService } from '../invoice/invoice.service';
@@ -30,7 +27,7 @@ interface CreateOrderData {
   date?: Date;
   companyId: string;
   modifiedBy?: string;
-  [key: string]: any; // Allow additional properties
+  [key: string]: any;
 }
 
 interface UpdateOrderData {
@@ -52,7 +49,6 @@ export class OrderService {
     private readonly invoiceService: InvoiceService,
   ) {}
 
-  // Find all orders for a company
   async findAll(companyId: string): Promise<OrderResponse[]> {
     const orders = await this.orderRepository.find({
       where: { companyId },
@@ -61,7 +57,6 @@ export class OrderService {
     return orders.map((order) => transformEntity(order) as OrderResponse);
   }
 
-  // Find order by ID with company access validation
   async findOne(id: string, companyId: string): Promise<OrderResponse> {
     const order = await validateCompanyAccess(
       () =>
@@ -75,7 +70,6 @@ export class OrderService {
     return transformEntity(order) as OrderResponse;
   }
 
-  // Find order by ID (for internal use)
   async findById(id: string): Promise<OrderEntity> {
     const order = await this.orderRepository.findOne({
       where: { id },
@@ -86,38 +80,28 @@ export class OrderService {
     return order;
   }
 
-  // Create new order
   async create(data: CreateOrderData): Promise<OrderResponse> {
-    // Generate unique order number if not provided or if it already exists
     let orderNumber = data.number;
     if (!orderNumber) {
       orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     } else {
-      // Check if order with number already exists in the same company
       const existing = await this.orderRepository.findOne({
         where: { number: orderNumber.trim(), companyId: data.companyId },
       });
 
       if (existing) {
-        // If exists, append timestamp to make it unique
         orderNumber = `${orderNumber.trim()}-${Date.now()}`;
       }
     }
 
-    // Set default date if not provided
     if (!data.date) {
       data.date = new Date();
     }
 
-    // Ensure type is properly set
     if (!data.type) {
       throw new Error('Order type is required');
     }
 
-    // Note: Product-warehouse type validation will be done when adding order items
-    // since we don't know which products will be added to the order at creation time
-
-    // Create order
     const order = this.orderRepository.create({
       number: orderNumber,
       type: data.type,
@@ -130,37 +114,27 @@ export class OrderService {
 
     const savedOrder = await this.orderRepository.save(order);
 
-    // Automatically create an invoice for the order
     try {
       await this.invoiceService.createForOrder(
         savedOrder.id,
         data.companyId,
         data.modifiedBy,
       );
-      console.log(
-        `✅ Invoice created automatically for order ${savedOrder.number}`,
-      );
+      // Invoice created successfully
     } catch (error) {
-      console.error(
-        `❌ Failed to create invoice for order ${savedOrder.number}:`,
-        error.message,
-      );
-      // Don't fail the order creation if invoice creation fails
+      // Failed to create invoice - log error but don't fail the order creation
     }
 
     return transformEntity(savedOrder) as OrderResponse;
   }
 
-  // Update order with company access validation
   async update(
     id: string,
     data: UpdateOrderData,
     companyId: string,
   ): Promise<OrderResponse> {
-    // Check if order exists and has access
     await this.findOne(id, companyId);
 
-    // Check if number is being changed and if it already exists
     if (data.number) {
       await validateFieldNotExistsInCompany(
         this.orderRepository,
@@ -173,7 +147,6 @@ export class OrderService {
       );
     }
 
-    // Update order
     await this.orderRepository.update(
       { id, companyId },
       {
@@ -189,7 +162,6 @@ export class OrderService {
     return this.findOne(id, companyId);
   }
 
-  // Delete order with company access validation
   async remove(
     id: string,
     companyId: string,
@@ -204,7 +176,6 @@ export class OrderService {
     );
   }
 
-  // Find orders by customer ID (for field resolver)
   async findOrdersByCustomerId(customerId: string): Promise<OrderEntity[]> {
     return this.orderRepository.find({
       where: { customerId },
@@ -212,11 +183,43 @@ export class OrderService {
     });
   }
 
-  // Find orders by warehouse ID (for field resolver)
-  async findOrdersByWarehouseId(warehouseId: string): Promise<OrderEntity[]> {
-    return this.orderRepository.find({
-      where: { warehouseId },
-      order: { createdAt: 'DESC' },
+  async createTransferOrder(
+    data: TransferOrderInput & { companyId: string; modifiedBy?: string },
+  ): Promise<OrderResponse> {
+    const fromWarehouse = await this.warehouseService.findById(
+      data.fromWarehouseId,
+    );
+    const toWarehouse = await this.warehouseService.findById(
+      data.toWarehouseId,
+    );
+
+    if (
+      fromWarehouse.companyId !== data.companyId ||
+      toWarehouse.companyId !== data.companyId
+    ) {
+      throw new BadRequestException(
+        'Warehouses must belong to the same company',
+      );
+    }
+
+    if (fromWarehouse.id === toWarehouse.id) {
+      throw new BadRequestException('From and to warehouses must be different');
+    }
+
+    const orderNumber = `TRANSFER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const transferOrder = this.orderRepository.create({
+      number: orderNumber,
+      type: OrderType.TRANSFER,
+      customerId: data.customerId,
+      warehouseId: data.toWarehouseId,
+      date: data.date ? new Date(data.date) : new Date(),
+      companyId: data.companyId,
+      modifiedBy: data.modifiedBy,
     });
+
+    const savedOrder = await this.orderRepository.save(transferOrder);
+
+    return transformEntity(savedOrder) as OrderResponse;
   }
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { InputType, Field, ObjectType, ID } from '@nestjs/graphql';
+import { InputType, Field, ObjectType, ID, Int } from '@nestjs/graphql';
 import { CustomerType } from './customer.entity';
 
 // ===== ZOD VALIDATION SCHEMAS =====
@@ -10,14 +10,10 @@ export const CustomerBaseSchema = z.object({
     .min(1, 'Customer name is required')
     .max(100, 'Customer name too long'),
   email: z.string().email('Invalid email format').optional(),
-  phone: z.string().max(20, 'Phone number too long').optional(),
-  address: z.string().max(200, 'Address too long').optional(),
-  type: z.enum(CustomerType),
+  type: z.enum(['CUSTOMER', 'SUPPLIER', 'customer', 'supplier']),
 });
 
-export const CreateCustomerSchema = CustomerBaseSchema.extend({
-  companyId: z.uuid('Invalid company ID'),
-});
+export const CreateCustomerSchema = CustomerBaseSchema;
 
 export const UpdateCustomerSchema = CustomerBaseSchema.partial();
 
@@ -31,12 +27,6 @@ export class CreateCustomerInput {
   @Field(() => String, { nullable: true })
   email?: string;
 
-  @Field(() => String, { nullable: true })
-  phone?: string;
-
-  @Field(() => String, { nullable: true })
-  address?: string;
-
   @Field(() => CustomerType)
   type: CustomerType;
 }
@@ -48,12 +38,6 @@ export class UpdateCustomerInput {
 
   @Field(() => String, { nullable: true })
   email?: string;
-
-  @Field(() => String, { nullable: true })
-  phone?: string;
-
-  @Field(() => String, { nullable: true })
-  address?: string;
 
   @Field(() => CustomerType, { nullable: true })
   type?: CustomerType;
@@ -77,16 +61,6 @@ export class CustomerResponse {
   })
   email?: string;
 
-  @Field(() => String, {
-    nullable: true,
-  })
-  phone?: string;
-
-  @Field(() => String, {
-    nullable: true,
-  })
-  address?: string;
-
   @Field(() => CustomerType)
   type: CustomerType;
 
@@ -109,4 +83,20 @@ export class CustomerResponse {
     nullable: true,
   })
   modifiedBy?: string;
+}
+
+// ===== REPORT TYPES =====
+
+export const ClientWithMostOrdersSchema = z.object({});
+
+@ObjectType()
+export class ClientWithMostOrders {
+  @Field(() => String)
+  customerId: string;
+
+  @Field(() => String)
+  customerName: string;
+
+  @Field(() => Int)
+  orderCount: number;
 }

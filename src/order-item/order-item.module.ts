@@ -12,7 +12,7 @@ import { WarehouseModule } from '../warehouse/warehouse.module';
   imports: [
     TypeOrmModule.forFeature([OrderItemEntity]),
     forwardRef(() => OrderModule),
-    ProductModule,
+    forwardRef(() => ProductModule),
     WarehouseModule,
   ],
   providers: [OrderItemService, OrderItemResolver],

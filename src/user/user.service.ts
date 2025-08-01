@@ -45,10 +45,6 @@ export class UserService {
     private readonly companyRepository: Repository<CompanyEntity>,
   ) {}
 
-  async validatePassword(user: UserEntity, password: string): Promise<boolean> {
-    return comparePassword(password, user.password);
-  }
-
   async findAll(companyId: string): Promise<UserResponse[]> {
     const users = await this.userRepository.find({
       where: { companyId },
@@ -102,16 +98,6 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
     return user;
-  }
-
-  async findByCompanyId(companyId: string): Promise<UserResponse[]> {
-    const users = await this.userRepository.find({
-      where: { companyId },
-      order: { createdAt: 'DESC' },
-    });
-    return users.map(
-      (user) => transformEntity(user, ['password']) as UserResponse,
-    );
   }
 
   async create(data: CreateUserData): Promise<UserResponse> {
