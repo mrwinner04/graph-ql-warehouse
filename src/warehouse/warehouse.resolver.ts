@@ -1,4 +1,11 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
 import { UseGuards, UsePipes } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
@@ -20,7 +27,7 @@ import {
   UpdateWarehouseSchema,
 } from './warehouse.types';
 
-@Resolver(() => WarehouseEntity)
+@Resolver(() => WarehouseResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class WarehouseResolver {
   constructor(private readonly warehouseService: WarehouseService) {}
@@ -115,4 +122,20 @@ export class WarehouseResolver {
       warehouseId,
     );
   }
+
+  @ResolveField(() => [AvailableStockReport])
+  async availableProducts(
+    @Parent() warehouse: WarehouseResponse,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<AvailableStockReport[]> {
+    return await this.warehouseService.getAvailableStock(
+      currentUser.companyId,
+      warehouse.id,
+    );
+  }
+
+  // //@ResolveField(() => OrderEntity)
+  //   async order(@Parent() invoice: InvoiceEntity) {
+  //     return await this.orderService.findById(invoice.orderId);
+  //   }
 }

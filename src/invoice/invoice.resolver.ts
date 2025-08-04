@@ -6,7 +6,7 @@ import {
   ResolveField,
   Parent,
 } from '@nestjs/graphql';
-import { UseGuards, UsePipes } from '@nestjs/common';
+import { Inject, UseGuards, UsePipes } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
@@ -16,19 +16,18 @@ import { AuthenticatedUser } from '../common/graphql-context';
 import { InvoiceEntity } from './invoice.entity';
 import { InvoiceService } from './invoice.service';
 import {
-  InvoiceResponse,
+  Invoice,
   CreateInvoiceInput,
   UpdateInvoiceInput,
 } from './invoice.types';
 import { OrderService } from '../order/order.service';
-import { OrderEntity } from '../order/order.entity';
+import { OrderResponse } from '../order/order.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CreateInvoiceSchema, UpdateInvoiceSchema } from './invoice.types';
-import { CalculationService } from '../common/calculation.service';
 
-@Resolver(() => InvoiceEntity)
+@Resolver(() => Invoice)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InvoiceResolver {
   constructor(
@@ -36,46 +35,32 @@ export class InvoiceResolver {
     private readonly orderService: OrderService,
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
-    private readonly calculationService: CalculationService,
   ) {}
 
-  @Query(() => [InvoiceEntity])
+  @Query(() => [Invoice])
   @AllRoles()
   async invoices(
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<InvoiceEntity[]> {
-    const invoices = await this.invoiceService.findAll(currentUser.companyId);
-
-    return invoices.map((invoiceResponse) => {
-      const invoice = new InvoiceEntity();
-      Object.assign(invoice, invoiceResponse);
-      return invoice;
-    });
+  ): Promise<Invoice[]> {
+    return this.invoiceService.findAll(currentUser.companyId);
   }
 
-  @Query(() => InvoiceEntity)
+  @Query(() => Invoice)
   @AllRoles()
   async invoice(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<InvoiceEntity> {
-    const invoiceResponse = await this.invoiceService.findOne(
-      id,
-      currentUser.companyId,
-    );
-
-    const invoice = new InvoiceEntity();
-    Object.assign(invoice, invoiceResponse);
-    return invoice;
+  ): Promise<Invoice> {
+    return await this.invoiceService.findOne(id, currentUser.companyId);
   }
 
-  @Mutation(() => InvoiceResponse)
+  @Mutation(() => Invoice)
   @OwnerAndOperator()
   async createInvoice(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('input', new ZodValidationPipe(CreateInvoiceSchema))
     input: CreateInvoiceInput,
-  ): Promise<InvoiceResponse> {
+  ): Promise<Invoice> {
     return await this.invoiceService.create({
       ...input,
       companyId: currentUser.companyId,
@@ -83,14 +68,14 @@ export class InvoiceResolver {
     });
   }
 
-  @Mutation(() => InvoiceResponse)
+  @Mutation(() => Invoice)
   @OwnerAndOperator()
   async updateInvoice(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('id') id: string,
     @Args('input', new ZodValidationPipe(UpdateInvoiceSchema))
     input: UpdateInvoiceInput,
-  ): Promise<InvoiceResponse> {
+  ): Promise<Invoice> {
     return await this.invoiceService.update(
       id,
       {
@@ -115,13 +100,8 @@ export class InvoiceResolver {
     return true;
   }
 
-  @ResolveField(() => OrderEntity)
-  async order(@Parent() invoice: InvoiceEntity) {
+  @ResolveField(() => OrderResponse)
+  async order(@Parent() invoice: Invoice) {
     return await this.orderService.findById(invoice.orderId);
-  }
-
-  @ResolveField(() => Number, { nullable: true })
-  async total(@Parent() invoice: InvoiceEntity): Promise<number> {
-    return await this.calculationService.calculateOrderTotal(invoice.orderId);
   }
 }

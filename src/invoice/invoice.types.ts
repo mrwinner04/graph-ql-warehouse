@@ -54,7 +54,7 @@ export class UpdateInvoiceInput {
 // ===== GRAPHQL RESPONSE TYPES =====
 
 @ObjectType()
-export class InvoiceResponse {
+export class Invoice {
   @Field(() => ID)
   id: string;
 

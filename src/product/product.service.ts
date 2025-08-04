@@ -69,14 +69,14 @@ export class ProductService {
   }
 
   // Find product by ID (for internal use)
-  async findById(id: string): Promise<ProductEntity> {
+  async findById(id: string): Promise<ProductResponse> {
     const product = await this.productRepository.findOne({
       where: { id },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return product;
+    return transformEntity(product) as ProductResponse;
   }
 
   async create(data: CreateProductData): Promise<ProductResponse> {

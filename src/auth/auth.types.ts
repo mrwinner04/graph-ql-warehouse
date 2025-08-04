@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { InputType, Field, ObjectType } from '@nestjs/graphql';
 import { UserRole } from '../common/types';
-import { UserEntity } from '../user/user.entity';
+import { UserResponse } from '../user/user.types';
 
 // ===== ZOD VALIDATION SCHEMAS =====
 
@@ -79,8 +79,8 @@ export class LoginResponse {
 
 @ObjectType()
 export class RegisterResponse {
-  @Field(() => UserEntity)
-  user: UserEntity;
+  @Field(() => UserResponse)
+  user: UserResponse;
 }
 
 @ObjectType()

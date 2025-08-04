@@ -15,79 +15,76 @@ import {
   AllRoles,
 } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
-import { CompanyEntity } from './company.entity';
-import { UserEntity } from '../user/user.entity';
-import { ProductEntity } from '../product/product.entity';
-import { OrderEntity } from '../order/order.entity';
-import { CustomerEntity } from '../customer/customer.entity';
-import { InvoiceEntity } from '../invoice/invoice.entity';
+import { UserResponse } from '../user/user.types';
+import { ProductResponse } from '../product/product.types';
+import { OrderResponse } from '../order/order.types';
+import { CustomerResponse } from '../customer/customer.types';
+import { Invoice } from '../invoice/invoice.types';
 import { CompanyService } from './company.service';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { UpdateCompanyInput } from './company.types';
+import { UpdateCompanyInput, Company } from './company.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { UpdateCompanySchema } from './company.types';
 
-@Resolver(() => CompanyEntity)
+@Resolver(() => Company)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CompanyResolver {
   constructor(private readonly companyService: CompanyService) {}
 
-  @Query(() => [CompanyEntity])
+  @Query(() => [Company])
   @OwnerOnly()
-  async companies(
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<CompanyEntity[]> {
+  async companies(@CurrentUser() user: AuthenticatedUser): Promise<Company[]> {
     return await this.companyService.findByCompanyId(user.companyId);
   }
 
-  @Query(() => CompanyEntity)
+  @Query(() => Company)
   @AllRoles()
   async company(
     @Args('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<CompanyEntity> {
+  ): Promise<Company> {
     if (user.companyId !== id) {
       throw new UnauthorizedException('Access denied');
     }
     return await this.companyService.findById(id);
   }
 
-  @Mutation(() => CompanyEntity)
+  @Mutation(() => Company)
   @OwnerAndOperator()
   @UsePipes(new ZodValidationPipe(UpdateCompanySchema))
   async updateCompany(
     @Args('id') id: string,
     @Args('input') input: UpdateCompanyInput,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<CompanyEntity> {
+  ): Promise<Company> {
     if (user.companyId !== id) {
       throw new UnauthorizedException('Access denied');
     }
     return await this.companyService.update(id, input);
   }
 
-  @ResolveField(() => [UserEntity])
-  async users(@Parent() company: CompanyEntity): Promise<UserEntity[]> {
+  @ResolveField(() => [UserResponse])
+  async users(@Parent() company: Company): Promise<UserResponse[]> {
     return this.companyService.findUsersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [ProductEntity])
-  async products(@Parent() company: CompanyEntity): Promise<ProductEntity[]> {
+  @ResolveField(() => [ProductResponse])
+  async products(@Parent() company: Company): Promise<ProductResponse[]> {
     return this.companyService.findProductsByCompanyId(company.id);
   }
 
-  @ResolveField(() => [OrderEntity])
-  async orders(@Parent() company: CompanyEntity): Promise<OrderEntity[]> {
+  @ResolveField(() => [OrderResponse])
+  async orders(@Parent() company: Company): Promise<OrderResponse[]> {
     return this.companyService.findOrdersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [CustomerEntity])
-  async customers(@Parent() company: CompanyEntity): Promise<CustomerEntity[]> {
+  @ResolveField(() => [CustomerResponse])
+  async customers(@Parent() company: Company): Promise<CustomerResponse[]> {
     return this.companyService.findCustomersByCompanyId(company.id);
   }
 
-  @ResolveField(() => [InvoiceEntity])
-  async invoices(@Parent() company: CompanyEntity): Promise<InvoiceEntity[]> {
+  @ResolveField(() => [Invoice])
+  async invoices(@Parent() company: Company): Promise<Invoice[]> {
     return this.companyService.findInvoicesByCompanyId(company.id);
   }
 }

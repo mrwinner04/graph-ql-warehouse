@@ -6,13 +6,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import {
-  ObjectType,
-  Field,
-  ID,
-  registerEnumType,
-  Float,
-} from '@nestjs/graphql';
+import { registerEnumType } from '@nestjs/graphql';
 
 export enum InvoiceStatus {
   PENDING = 'pending',
@@ -22,26 +16,20 @@ registerEnumType(InvoiceStatus, {
   name: 'InvoiceStatus',
 });
 
-@ObjectType()
 @Entity('invoices')
 export class InvoiceEntity {
-  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Field(() => String)
   @Column({ type: 'uuid', name: 'company_id', nullable: false })
   companyId: string;
 
-  @Field(() => String)
   @Column({ type: 'uuid', name: 'order_id', nullable: false })
   orderId: string;
 
-  @Field(() => String)
   @Column({ type: 'varchar', nullable: false })
   number: string;
 
-  @Field(() => Date)
   @Column({
     type: 'timestamp',
     nullable: false,
@@ -49,7 +37,6 @@ export class InvoiceEntity {
   })
   date: Date;
 
-  @Field(() => InvoiceStatus)
   @Column({
     type: 'enum',
     enum: InvoiceStatus,
@@ -58,7 +45,6 @@ export class InvoiceEntity {
   })
   status: InvoiceStatus;
 
-  @Field(() => Date)
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamp',
@@ -67,7 +53,6 @@ export class InvoiceEntity {
   })
   createdAt: Date;
 
-  @Field(() => Date)
   @UpdateDateColumn({
     name: 'updated_at',
     type: 'timestamp',
@@ -79,15 +64,6 @@ export class InvoiceEntity {
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
   deletedAt?: Date;
 
-  @Field(() => String, {
-    nullable: true,
-  })
   @Column({ type: 'uuid', name: 'modified_by', nullable: true })
   modifiedBy?: string;
-
-  @Field(() => Float, {
-    description: 'Total amount of the invoice',
-    nullable: true,
-  })
-  total?: number;
 }

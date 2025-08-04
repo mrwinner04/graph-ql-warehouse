@@ -6,13 +6,13 @@ import {
   ResolveField,
   Parent,
 } from '@nestjs/graphql';
-import { UseGuards, UsePipes } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 
-import { OrderEntity } from './order.entity';
 import {
   CreateOrderInput,
   UpdateOrderInput,
   TransferOrderInput,
+  OrderResponse,
 } from './order.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CreateOrderSchema, UpdateOrderSchema } from './order.types';
@@ -23,16 +23,16 @@ import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 
 import { AuthenticatedUser } from '../common/graphql-context';
-import { CustomerEntity } from '../customer/customer.entity';
-import { WarehouseEntity } from '../warehouse/warehouse.entity';
-import { OrderItemEntity } from '../order-item/order-item.entity';
-import { InvoiceEntity } from '../invoice/invoice.entity';
+import { CustomerResponse } from '../customer/customer.types';
+import { WarehouseResponse } from '../warehouse/warehouse.types';
+import { OrderItemResponse } from '../order-item/order-item.types';
+import { Invoice } from '../invoice/invoice.types';
 import { CustomerService } from '../customer/customer.service';
 import { WarehouseService } from '../warehouse/warehouse.service';
 import { OrderItemService } from '../order-item/order-item.service';
 import { InvoiceService } from '../invoice/invoice.service';
 
-@Resolver(() => OrderEntity)
+@Resolver(() => OrderResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrderResolver {
   constructor(
@@ -43,63 +43,46 @@ export class OrderResolver {
     private readonly invoiceService: InvoiceService,
   ) {}
 
-  @Query(() => [OrderEntity])
+  @Query(() => [OrderResponse])
   @AllRoles()
   async orders(
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderEntity[]> {
-    const orders = await this.orderService.findAll(currentUser.companyId);
-    // Convert OrderResponse back to OrderEntity for field resolvers
-    return orders.map((orderResponse) => {
-      const order = new OrderEntity();
-      Object.assign(order, orderResponse);
-      return order;
-    });
+  ): Promise<OrderResponse[]> {
+    return await this.orderService.findAll(currentUser.companyId);
   }
 
-  @Query(() => OrderEntity)
+  @Query(() => OrderResponse)
   @AllRoles()
   async order(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderEntity> {
-    const orderResponse = await this.orderService.findOne(
-      id,
-      currentUser.companyId,
-    );
-    // Convert OrderResponse back to OrderEntity for field resolvers
-    const order = new OrderEntity();
-    Object.assign(order, orderResponse);
-    return order;
+  ): Promise<OrderResponse> {
+    return await this.orderService.findOne(id, currentUser.companyId);
   }
 
-  @Mutation(() => OrderEntity)
+  @Mutation(() => OrderResponse)
   @OwnerAndOperator()
   async createOrder(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('input', new ZodValidationPipe(CreateOrderSchema))
     input: CreateOrderInput,
-  ): Promise<OrderEntity> {
-    const orderResponse = await this.orderService.create({
+  ): Promise<OrderResponse> {
+    return await this.orderService.create({
       ...input,
       modifiedBy: currentUser.id,
       companyId: currentUser.companyId,
     });
-
-    const order = new OrderEntity();
-    Object.assign(order, orderResponse);
-    return order;
   }
 
-  @Mutation(() => OrderEntity)
+  @Mutation(() => OrderResponse)
   @OwnerAndOperator()
   async updateOrder(
     @Args('id') id: string,
     @Args('input', new ZodValidationPipe(UpdateOrderSchema))
     input: UpdateOrderInput,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderEntity> {
-    const orderResponse = await this.orderService.update(
+  ): Promise<OrderResponse> {
+    return await this.orderService.update(
       id,
       {
         ...input,
@@ -107,10 +90,6 @@ export class OrderResolver {
       },
       currentUser.companyId,
     );
-
-    const order = new OrderEntity();
-    Object.assign(order, orderResponse);
-    return order;
   }
 
   @Mutation(() => Boolean)
@@ -123,40 +102,38 @@ export class OrderResolver {
     return true;
   }
 
-  @Mutation(() => OrderEntity)
+  @Mutation(() => OrderResponse)
   @OwnerAndOperator()
   async createTransferOrder(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('input') input: TransferOrderInput,
-  ): Promise<OrderEntity> {
-    const orderResponse = await this.orderService.createTransferOrder({
+  ): Promise<OrderResponse> {
+    return await this.orderService.createTransferOrder({
       ...input,
       modifiedBy: currentUser.id,
       companyId: currentUser.companyId,
     });
-
-    const order = new OrderEntity();
-    Object.assign(order, orderResponse);
-    return order;
   }
 
-  @ResolveField(() => CustomerEntity)
-  async customer(@Parent() order: OrderEntity): Promise<CustomerEntity> {
+  @ResolveField(() => CustomerResponse)
+  async customer(@Parent() order: OrderResponse): Promise<CustomerResponse> {
     return this.customerService.findById(order.customerId);
   }
 
-  @ResolveField(() => WarehouseEntity)
-  async warehouse(@Parent() order: OrderEntity): Promise<WarehouseEntity> {
+  @ResolveField(() => WarehouseResponse)
+  async warehouse(@Parent() order: OrderResponse): Promise<WarehouseResponse> {
     return this.warehouseService.findById(order.warehouseId);
   }
 
-  @ResolveField(() => [OrderItemEntity])
-  async orderItems(@Parent() order: OrderEntity): Promise<OrderItemEntity[]> {
+  @ResolveField(() => [OrderItemResponse])
+  async orderItems(
+    @Parent() order: OrderResponse,
+  ): Promise<OrderItemResponse[]> {
     return this.orderItemService.findOrderItemsByOrderId(order.id);
   }
 
-  @ResolveField(() => [InvoiceEntity])
-  async invoices(@Parent() order: OrderEntity): Promise<InvoiceEntity[]> {
+  @ResolveField(() => [Invoice])
+  async invoices(@Parent() order: OrderResponse): Promise<Invoice[]> {
     return this.invoiceService.findInvoicesByOrderId(order.id);
   }
 }

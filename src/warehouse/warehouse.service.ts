@@ -68,14 +68,14 @@ export class WarehouseService {
     return transformEntity(warehouse) as WarehouseResponse;
   }
 
-  async findById(id: string): Promise<WarehouseEntity> {
+  async findById(id: string): Promise<WarehouseResponse> {
     const warehouse = await this.warehouseRepository.findOne({
       where: { id },
     });
     if (!warehouse) {
       throw new NotFoundException('Warehouse not found');
     }
-    return warehouse;
+    return transformEntity(warehouse) as WarehouseResponse;
   }
 
   async create(data: CreateWarehouseData): Promise<WarehouseResponse> {
@@ -187,7 +187,7 @@ export class WarehouseService {
     companyId: string,
     warehouseId?: string,
   ): Promise<AvailableStockReport[]> {
-    let warehouses: WarehouseEntity[];
+    let warehouses: WarehouseResponse[];
 
     if (warehouseId) {
       // Get specific warehouse
@@ -198,10 +198,13 @@ export class WarehouseService {
       warehouses = [warehouse];
     } else {
       // Get all warehouses in company
-      warehouses = await this.warehouseRepository.find({
+      const warehouseEntities = await this.warehouseRepository.find({
         where: { companyId },
         order: { name: 'ASC' },
       });
+      warehouses = warehouseEntities.map(
+        (entity) => transformEntity(entity) as WarehouseResponse,
+      );
     }
 
     const reports: AvailableStockReport[] = [];

@@ -12,8 +12,7 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { CustomerEntity } from './customer.entity';
-import { OrderEntity } from '../order/order.entity';
+import { OrderResponse } from '../order/order.types';
 import { CustomerService } from './customer.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
@@ -25,7 +24,7 @@ import {
   ClientWithMostOrders,
 } from './customer.types';
 
-@Resolver(() => CustomerEntity)
+@Resolver(() => CustomerResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CustomerResolver {
   constructor(private readonly customerService: CustomerService) {}
@@ -93,8 +92,8 @@ export class CustomerResolver {
     return true;
   }
 
-  @ResolveField(() => [OrderEntity])
-  async orders(@Parent() customer: CustomerEntity): Promise<OrderEntity[]> {
+  @ResolveField(() => [OrderResponse])
+  async orders(@Parent() customer: CustomerResponse): Promise<OrderResponse[]> {
     return await this.customerService.findOrdersByCustomerId(customer.id);
   }
 

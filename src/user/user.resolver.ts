@@ -10,7 +10,6 @@ import {
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { UserRole } from '../common/types';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { UserEntity } from './user.entity';
 import { UserService } from './user.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
@@ -23,7 +22,7 @@ import {
   AddUserToCompanyInput,
 } from './user.types';
 
-@Resolver(() => UserEntity)
+@Resolver(() => UserResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UserResolver {
   constructor(private readonly userService: UserService) {}

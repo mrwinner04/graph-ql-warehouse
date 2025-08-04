@@ -70,14 +70,14 @@ export class OrderService {
     return transformEntity(order) as OrderResponse;
   }
 
-  async findById(id: string): Promise<OrderEntity> {
+  async findById(id: string): Promise<OrderResponse> {
     const order = await this.orderRepository.findOne({
       where: { id },
     });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    return order;
+    return transformEntity(order) as OrderResponse;
   }
 
   async create(data: CreateOrderData): Promise<OrderResponse> {
@@ -120,10 +120,7 @@ export class OrderService {
         data.companyId,
         data.modifiedBy,
       );
-      // Invoice created successfully
-    } catch (error) {
-      // Failed to create invoice - log error but don't fail the order creation
-    }
+    } catch (error) {}
 
     return transformEntity(savedOrder) as OrderResponse;
   }

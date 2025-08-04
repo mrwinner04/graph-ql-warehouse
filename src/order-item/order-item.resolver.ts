@@ -8,8 +8,11 @@ import {
 } from '@nestjs/graphql';
 import { UseGuards, UsePipes } from '@nestjs/common';
 
-import { OrderItemEntity } from './order-item.entity';
-import { CreateOrderItemInput, UpdateOrderItemInput } from './order-item.types';
+import {
+  CreateOrderItemInput,
+  UpdateOrderItemInput,
+  OrderItemResponse,
+} from './order-item.types';
 import { OrderItemService } from './order-item.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
@@ -18,8 +21,8 @@ import { CurrentUser } from '../decorator/current-user.decorator';
 
 import { AuthenticatedUser } from '../common/graphql-context';
 
-import { OrderEntity } from '../order/order.entity';
-import { ProductEntity } from '../product/product.entity';
+import { OrderResponse } from '../order/order.types';
+import { ProductResponse } from '../product/product.types';
 import { OrderService } from '../order/order.service';
 import { ProductService } from '../product/product.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -28,7 +31,7 @@ import {
   UpdateOrderItemSchema,
 } from './order-item.types';
 
-@Resolver(() => OrderItemEntity)
+@Resolver(() => OrderItemResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrderItemResolver {
   constructor(
@@ -37,84 +40,46 @@ export class OrderItemResolver {
     private readonly productService: ProductService,
   ) {}
 
-  @Query(() => [OrderItemEntity])
+  @Query(() => [OrderItemResponse])
   @AllRoles()
   async orderItems(
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderItemEntity[]> {
-    const orderItems = await this.orderItemService.findAll(
-      currentUser.companyId,
-    );
-
-    const filteredOrderItems: OrderItemEntity[] = [];
-    for (const orderItemResponse of orderItems) {
-      try {
-        const order = await this.orderService.findById(
-          orderItemResponse.orderId,
-        );
-        if (order.companyId === currentUser.companyId) {
-          const orderItem = new OrderItemEntity();
-          Object.assign(orderItem, orderItemResponse);
-          filteredOrderItems.push(orderItem);
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-
-    return filteredOrderItems;
+  ): Promise<OrderItemResponse[]> {
+    return await this.orderItemService.findAll(currentUser.companyId);
   }
 
-  @Query(() => OrderItemEntity)
+  @Query(() => OrderItemResponse)
   @AllRoles()
   async orderItem(
     @Args('id') id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderItemEntity> {
-    const orderItemResponse = await this.orderItemService.findOne(
-      id,
-      currentUser.companyId,
-    );
-
-    const order = await this.orderService.findById(orderItemResponse.orderId);
-    if (order.companyId !== currentUser.companyId) {
-      throw new Error('Order item not found');
-    }
-
-    const orderItem = new OrderItemEntity();
-    Object.assign(orderItem, orderItemResponse);
-    return orderItem;
+  ): Promise<OrderItemResponse> {
+    return await this.orderItemService.findOne(id, currentUser.companyId);
   }
 
-  @Mutation(() => OrderItemEntity)
+  @Mutation(() => OrderItemResponse)
   @OwnerAndOperator()
   async createOrderItem(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Args('input', new ZodValidationPipe(CreateOrderItemSchema))
     input: CreateOrderItemInput,
-  ): Promise<OrderItemEntity> {
-    const order = await this.orderService.findById(input.orderId);
-
-    const orderItemResponse = await this.orderItemService.create({
+  ): Promise<OrderItemResponse> {
+    return await this.orderItemService.create({
       ...input,
       companyId: currentUser.companyId,
       modifiedBy: currentUser.id,
     });
-
-    const orderItem = new OrderItemEntity();
-    Object.assign(orderItem, orderItemResponse);
-    return orderItem;
   }
 
-  @Mutation(() => OrderItemEntity)
+  @Mutation(() => OrderItemResponse)
   @OwnerAndOperator()
   async updateOrderItem(
     @Args('id') id: string,
     @Args('input', new ZodValidationPipe(UpdateOrderItemSchema))
     input: UpdateOrderItemInput,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<OrderItemEntity> {
-    const orderItemResponse = await this.orderItemService.update(
+  ): Promise<OrderItemResponse> {
+    return await this.orderItemService.update(
       id,
       {
         ...input,
@@ -122,10 +87,6 @@ export class OrderItemResolver {
       },
       currentUser.companyId,
     );
-
-    const orderItem = new OrderItemEntity();
-    Object.assign(orderItem, orderItemResponse);
-    return orderItem;
   }
 
   @Mutation(() => Boolean)
@@ -142,13 +103,15 @@ export class OrderItemResolver {
     return true;
   }
 
-  @ResolveField(() => OrderEntity)
-  async order(@Parent() orderItem: OrderItemEntity): Promise<OrderEntity> {
+  @ResolveField(() => OrderResponse)
+  async order(@Parent() orderItem: OrderItemResponse): Promise<OrderResponse> {
     return this.orderService.findById(orderItem.orderId);
   }
 
-  @ResolveField(() => ProductEntity)
-  async product(@Parent() orderItem: OrderItemEntity): Promise<ProductEntity> {
+  @ResolveField(() => ProductResponse)
+  async product(
+    @Parent() orderItem: OrderItemResponse,
+  ): Promise<ProductResponse> {
     return this.productService.findById(orderItem.productId);
   }
 }

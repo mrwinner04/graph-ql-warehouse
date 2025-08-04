@@ -21,6 +21,8 @@ import { UserEntity } from '../user/user.entity';
 import { CompanyEntity } from '../company/company.entity';
 import { hashPassword, comparePassword } from '../common/entity-transformers';
 import { validateFieldNotExistsGlobally } from '../common/common.utils';
+import { transformEntity } from '../common/entity-transformers';
+import { UserResponse } from '../user/user.types';
 
 @Injectable()
 export class AuthService {
@@ -96,7 +98,7 @@ export class AuthService {
     const savedUser = await this.userRepository.save(user);
 
     return {
-      user: savedUser,
+      user: transformEntity(savedUser, ['password']) as UserResponse,
     };
   }
 

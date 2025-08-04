@@ -12,10 +12,9 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { OwnerAndOperator, AllRoles } from '../decorator/roles.decorator';
 import { CurrentUser } from '../decorator/current-user.decorator';
 import { AuthenticatedUser } from '../common/graphql-context';
-import { ProductEntity } from './product.entity';
 import { ProductService } from './product.service';
 import { OrderItemService } from '../order-item/order-item.service';
-import { OrderItemEntity } from '../order-item/order-item.entity';
+import { OrderItemResponse } from '../order-item/order-item.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   CreateProductSchema,
@@ -28,7 +27,7 @@ import {
   BestSellingProductsSchema,
 } from './product.types';
 
-@Resolver(() => ProductEntity)
+@Resolver(() => ProductResponse)
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductResolver {
   constructor(
@@ -120,10 +119,10 @@ export class ProductResolver {
     );
   }
 
-  @ResolveField(() => [OrderItemEntity])
+  @ResolveField(() => [OrderItemResponse])
   async orderItems(
-    @Parent() product: ProductEntity,
-  ): Promise<OrderItemEntity[]> {
+    @Parent() product: ProductResponse,
+  ): Promise<OrderItemResponse[]> {
     return await this.orderItemService.findOrderItemsByProductId(product.id);
   }
 }

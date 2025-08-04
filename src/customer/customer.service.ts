@@ -60,14 +60,14 @@ export class CustomerService {
     return transformEntity(customer) as CustomerResponse;
   }
 
-  async findById(id: string): Promise<CustomerEntity> {
+  async findById(id: string): Promise<CustomerResponse> {
     const customer = await this.customerRepository.findOne({
       where: { id },
     });
     if (!customer) {
       throw new NotFoundException('Customer not found');
     }
-    return customer;
+    return transformEntity(customer) as CustomerResponse;
   }
 
   async create(data: CreateCustomerData): Promise<CustomerResponse> {

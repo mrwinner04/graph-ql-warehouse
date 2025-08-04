@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InvoiceEntity, InvoiceStatus } from './invoice.entity';
-import { InvoiceResponse } from './invoice.types';
+import { Invoice } from './invoice.types';
 import { transformEntity } from '../common/entity-transformers';
 import {
   validateFieldNotExistsInCompany,
@@ -11,7 +11,6 @@ import {
 import { validateCompanyAccess } from '../common/company-access.utils';
 import { UserRole } from '../common/types';
 import { nanoid } from 'nanoid';
-import { CalculationService } from '../common/calculation.service';
 
 interface CreateInvoiceData {
   orderId: string;
@@ -35,10 +34,9 @@ export class InvoiceService {
   constructor(
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepository: Repository<InvoiceEntity>,
-    private readonly calculationService: CalculationService,
   ) {}
 
-  async findAll(companyId: string): Promise<InvoiceResponse[]> {
+  async findAll(companyId: string): Promise<Invoice[]> {
     const invoices = await this.invoiceRepository.find({
       where: { companyId },
       order: { createdAt: 'DESC' },
@@ -46,10 +44,8 @@ export class InvoiceService {
 
     const invoicesWithTotals = await Promise.all(
       invoices.map(async (invoice) => {
-        const total = await this.calculationService.calculateOrderTotal(
-          invoice.orderId,
-        );
-        const transformed = transformEntity(invoice) as InvoiceResponse;
+        const total = await this.calculateOrderTotal(invoice.orderId);
+        const transformed = transformEntity(invoice) as Invoice;
         return { ...transformed, total };
       }),
     );
@@ -57,7 +53,7 @@ export class InvoiceService {
     return invoicesWithTotals;
   }
 
-  async findOne(id: string, companyId: string): Promise<InvoiceResponse> {
+  async findOne(id: string, companyId: string): Promise<Invoice> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
     });
@@ -72,10 +68,8 @@ export class InvoiceService {
       'Invoice',
     );
 
-    const total = await this.calculationService.calculateOrderTotal(
-      invoice.orderId,
-    );
-    const transformed = transformEntity(invoice) as InvoiceResponse;
+    const total = await this.calculateOrderTotal(invoice.orderId);
+    const transformed = transformEntity(invoice) as Invoice;
     return { ...transformed, total };
   }
 
@@ -89,7 +83,19 @@ export class InvoiceService {
     return invoice;
   }
 
-  async create(data: CreateInvoiceData): Promise<InvoiceResponse> {
+  async calculateOrderTotal(orderId: string): Promise<number> {
+    const result = await this.invoiceRepository.manager
+      .createQueryBuilder()
+      .select('SUM(oi.quantity * CAST(oi.price AS DECIMAL))', 'total')
+      .from('order_items', 'oi')
+      .where('oi.order_id = :orderId', { orderId })
+      .andWhere('oi.deleted_at IS NULL')
+      .getRawOne();
+
+    return result?.total ? parseFloat(result.total) : 0;
+  }
+
+  async create(data: CreateInvoiceData): Promise<Invoice> {
     let invoiceNumber = data.number;
     if (!invoiceNumber) {
       let tries = 0;
@@ -131,14 +137,16 @@ export class InvoiceService {
     });
 
     const savedInvoice = await this.invoiceRepository.save(invoice);
-    return transformEntity(savedInvoice) as InvoiceResponse;
+    const total = await this.calculateOrderTotal(savedInvoice.orderId);
+    const transformed = transformEntity(savedInvoice) as Invoice;
+    return { ...transformed, total };
   }
 
   async update(
     id: string,
     data: UpdateInvoiceData,
     companyId: string,
-  ): Promise<InvoiceResponse> {
+  ): Promise<Invoice> {
     await this.findOne(id, companyId);
 
     if (data.number) {
@@ -192,7 +200,7 @@ export class InvoiceService {
     orderId: string,
     companyId: string,
     modifiedBy?: string,
-  ): Promise<InvoiceResponse> {
+  ): Promise<Invoice> {
     return this.create({
       orderId,
       companyId,
